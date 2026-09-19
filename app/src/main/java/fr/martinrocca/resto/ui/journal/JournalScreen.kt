@@ -1,18 +1,13 @@
 package fr.martinrocca.resto.ui.journal
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -30,9 +25,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.Restaurant
-import fr.martinrocca.resto.domain.model.tagEquivalenceKey
+import fr.martinrocca.resto.domain.model.cuisineFilters
+import fr.martinrocca.resto.domain.model.matchesFilters
 import fr.martinrocca.resto.ui.components.EmptyState
 import fr.martinrocca.resto.ui.components.RestaurantCard
+import fr.martinrocca.resto.ui.components.RestaurantFilters
 
 @Composable
 fun JournalScreen(
@@ -47,31 +44,14 @@ fun JournalScreen(
     val michelinFilter = michelinFilterName?.let(MichelinStatus::valueOf)
     val focusManager = LocalFocusManager.current
     val cuisineFilters = remember(restaurants) {
-        restaurants
-            .filter(Restaurant::isVisited)
-            .flatMap { restaurant -> restaurant.tags.map { it.name } }
-            .groupBy(::tagEquivalenceKey)
-            .map { (key, names) ->
-                CuisineFilter(
-                    key = key,
-                    label = names.groupingBy { it }.eachCount().maxBy { it.value }.key,
-                )
-            }
-            .sortedBy { it.label.lowercase() }
+        cuisineFilters(restaurants.filter(Restaurant::isVisited))
     }
 
     val filteredRestaurants = remember(restaurants, query, michelinFilter, cuisineFilterKey) {
         restaurants
             .asSequence()
             .filter(Restaurant::isVisited)
-            .filter { restaurant ->
-                michelinFilter == null || restaurant.michelinStatus == michelinFilter
-            }
-            .filter { restaurant ->
-                cuisineFilterKey == null || restaurant.tags.any {
-                    tagEquivalenceKey(it.name) == cuisineFilterKey
-                }
-            }
+            .filter { it.matchesFilters(michelinFilter, cuisineFilterKey) }
             .filter { restaurant ->
                 query.isBlank() || restaurant.searchableText().contains(query.trim(), ignoreCase = true)
             }
@@ -93,14 +73,7 @@ fun JournalScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Journal", style = MaterialTheme.typography.displaySmall)
-                Text(
-                    text = "${restaurants.count(Restaurant::isVisited)} restaurants visités",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text("Journal", style = MaterialTheme.typography.displaySmall)
         }
         item {
             OutlinedTextField(
@@ -114,49 +87,13 @@ fun JournalScreen(
             )
         }
         item {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilterChip(
-                    selected = michelinFilter == null,
-                    onClick = { michelinFilterName = null },
-                    label = { Text("Tous") },
-                )
-                MichelinStatus.entries
-                    .filterNot { it == MichelinStatus.ABSENT }
-                    .forEach { status ->
-                    FilterChip(
-                        selected = michelinFilter == status,
-                        onClick = { michelinFilterName = status.name },
-                        label = { Text(status.compactLabel) },
-                    )
-                }
-            }
-        }
-        if (cuisineFilters.isNotEmpty()) {
-            item {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    FilterChip(
-                        selected = cuisineFilterKey == null,
-                        onClick = { cuisineFilterKey = null },
-                        label = { Text("Toutes cuisines") },
-                    )
-                    cuisineFilters.forEach { cuisine ->
-                        FilterChip(
-                            selected = cuisineFilterKey == cuisine.key,
-                            onClick = {
-                                cuisineFilterKey = cuisine.key
-                                    .takeUnless { it == cuisineFilterKey }
-                            },
-                            label = { Text(cuisine.label) },
-                        )
-                    }
-                }
-            }
+            RestaurantFilters(
+                michelin = michelinFilter,
+                onMichelinChange = { michelinFilterName = it?.name },
+                cuisines = cuisineFilters,
+                cuisineKey = cuisineFilterKey,
+                onCuisineChange = { cuisineFilterKey = it },
+            )
         }
 
         if (filteredRestaurants.isEmpty()) {
@@ -182,6 +119,7 @@ fun JournalScreen(
                 RestaurantCard(
                     restaurant = restaurant,
                     onClick = { onRestaurantClick(restaurant.id) },
+                    showAddress = false,
                 )
             }
         }
@@ -197,8 +135,3 @@ private fun Restaurant.searchableText(): String = buildString {
         visit.comment?.let { append(' ').append(it) }
     }
 }
-
-private data class CuisineFilter(
-    val key: String,
-    val label: String,
-)

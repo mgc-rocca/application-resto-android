@@ -16,14 +16,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import fr.martinrocca.resto.domain.model.RatingBand
 import fr.martinrocca.resto.domain.model.Restaurant
-import fr.martinrocca.resto.domain.model.ratingBand
+import fr.martinrocca.resto.ui.components.ratingColor
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -38,6 +38,11 @@ import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
 import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
 import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.PropertyFactory.circleColor
+import org.maplibre.android.style.layers.PropertyFactory.circleRadius
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
@@ -48,6 +53,8 @@ fun RestaurantMap(
     restaurants: List<Restaurant>,
     initialCameraTarget: MapTarget?,
     cameraTarget: MapTarget?,
+    cameraRequestId: Int,
+    deviceLocation: MapTarget?,
     onCameraChanged: (MapTarget) -> Unit,
     onRestaurantClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -141,7 +148,7 @@ fun RestaurantMap(
         if (markerStyle != null && currentMap != null && !didPositionInitialCamera) {
             didPositionInitialCamera = true
             mapView.post {
-                val restoredTarget = currentInitialCameraTarget
+                val restoredTarget = cameraTarget ?: currentInitialCameraTarget
                 if (restoredTarget != null) {
                     currentMap.moveCamera(
                         CameraUpdateFactory.newCameraPosition(restoredTarget.toCameraPosition()),
@@ -180,8 +187,17 @@ fun RestaurantMap(
         }
     }
 
-    LaunchedEffect(map, cameraTarget) {
+    LaunchedEffect(markerStyle, deviceLocation) {
+        val features = deviceLocation?.let {
+            listOf(Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude)))
+        }.orEmpty()
+        markerStyle?.getSourceAs<GeoJsonSource>(LOCATION_SOURCE_ID)
+            ?.setGeoJson(FeatureCollection.fromFeatures(features))
+    }
+
+    LaunchedEffect(map, markerStyle, cameraTarget, cameraRequestId) {
         val target = cameraTarget ?: return@LaunchedEffect
+        if (markerStyle == null) return@LaunchedEffect
         map?.animateCamera(
             CameraUpdateFactory.newCameraPosition(target.toCameraPosition()),
             700,
@@ -190,11 +206,18 @@ fun RestaurantMap(
 }
 
 private fun addMarkerAssets(style: Style, density: Float) {
+    style.addSource(GeoJsonSource(LOCATION_SOURCE_ID, FeatureCollection.fromFeatures(emptyList<Feature>())))
+    style.addLayer(
+        CircleLayer("resto-device-location", LOCATION_SOURCE_ID).withProperties(
+            circleRadius(7f), circleColor("#3275AC"),
+            circleStrokeColor("#FFFFFF"), circleStrokeWidth(3f),
+        ),
+    )
     (1..10).forEach { rating ->
         style.addImage(
             markerIconId(rating),
             createMarkerBitmap(
-                color = markerColor(rating),
+                color = ratingColor(rating).toArgb(),
                 label = rating.toString(),
                 density = density,
             ),
@@ -203,7 +226,7 @@ private fun addMarkerAssets(style: Style, density: Float) {
     style.addImage(
         WISHLIST_ICON_ID,
         createMarkerBitmap(
-            color = markerColor(null),
+            color = ratingColor(null).toArgb(),
             label = "+",
             density = density,
         ),
@@ -282,15 +305,6 @@ private fun CameraPosition.toMapTarget(): MapTarget? = target?.let { center ->
     )
 }
 
-private fun markerColor(rating: Int?): Int = when (ratingBand(rating)) {
-    RatingBand.VERY_LOW -> Color.rgb(182, 106, 92)
-    RatingBand.LOW -> Color.rgb(198, 151, 79)
-    RatingBand.GOOD -> Color.rgb(126, 149, 106)
-    RatingBand.VERY_GOOD -> Color.rgb(79, 127, 105)
-    RatingBand.EXCEPTIONAL -> Color.rgb(49, 95, 80)
-    RatingBand.WISHLIST -> Color.rgb(116, 111, 105)
-}
-
 private fun createMarkerBitmap(
     color: Int,
     label: String,
@@ -324,6 +338,7 @@ private fun createMarkerBitmap(
 }
 
 private const val MARKER_SOURCE_ID = "resto-restaurants-source"
+private const val LOCATION_SOURCE_ID = "resto-device-location-source"
 private const val MARKER_LAYER_ID = "resto-restaurants-layer"
 private const val RESTAURANT_ID_PROPERTY = "restaurantId"
 private const val ICON_ID_PROPERTY = "iconId"

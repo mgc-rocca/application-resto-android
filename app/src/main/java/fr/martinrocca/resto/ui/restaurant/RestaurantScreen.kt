@@ -1,5 +1,6 @@
 package fr.martinrocca.resto.ui.restaurant
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,8 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Place
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
@@ -34,15 +35,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.Visit
+import fr.martinrocca.resto.domain.model.shareText
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.BackHeader
 import fr.martinrocca.resto.ui.components.RatingBadge
 import fr.martinrocca.resto.ui.components.LocalPhoto
+import fr.martinrocca.resto.ui.components.MichelinBadge
 import fr.martinrocca.resto.ui.components.toFrenchDate
 import kotlinx.coroutines.launch
 
@@ -50,6 +54,7 @@ import kotlinx.coroutines.launch
 fun RestaurantScreen(
     restaurant: Restaurant?,
     viewModel: RestoViewModel,
+    knownTags: List<String>,
     onBack: () -> Unit,
     onAddVisit: (String) -> Unit,
     onEditRestaurant: (String) -> Unit,
@@ -60,7 +65,9 @@ fun RestaurantScreen(
     var confirmRestaurantDeletion by rememberSaveable { mutableStateOf(false) }
     var visitToDelete by rememberSaveable { mutableStateOf<String?>(null) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var editingTags by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -114,10 +121,7 @@ fun RestaurantScreen(
                         )
                     }
                     if (restaurant.michelinStatus != MichelinStatus.ABSENT) {
-                        AssistChip(
-                            onClick = {},
-                            label = { Text(restaurant.michelinStatus.label) },
-                        )
+                        MichelinBadge(restaurant.michelinStatus)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -130,6 +134,25 @@ fun RestaurantScreen(
                             modifier = Modifier.padding(start = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, restaurant.shareText())
+                                    putExtra(Intent.EXTRA_TITLE, restaurant.name)
+                                    putExtra(Intent.EXTRA_SUBJECT, restaurant.name)
+                                }
+                                runCatching {
+                                    context.startActivity(Intent.createChooser(intent, "Partager le restaurant"))
+                                }.onFailure { errorMessage = "Impossible d’ouvrir le partage." }
+                            },
+                        ) {
+                            Icon(Icons.Outlined.Share, null)
+                            Text("Partager", Modifier.padding(start = 8.dp))
+                        }
+                        TextButton(onClick = { editingTags = true }) { Text("Modifier les tags") }
                     }
                 }
             }
@@ -196,6 +219,15 @@ fun RestaurantScreen(
                 item { Text(text = it, color = MaterialTheme.colorScheme.error) }
             }
         }
+    }
+
+    if (editingTags && restaurant != null) {
+        RestaurantTagsDialog(
+            restaurant = restaurant,
+            knownTags = knownTags,
+            onDismiss = { editingTags = false },
+            onSave = { viewModel.updateRestaurantTags(restaurant.id, it) },
+        )
     }
 
     if (confirmRestaurantDeletion && restaurant != null) {

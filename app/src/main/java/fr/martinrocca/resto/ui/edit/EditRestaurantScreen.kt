@@ -53,6 +53,7 @@ fun EditRestaurantScreen(
     var michelinName by rememberSaveable(restaurant?.id) {
         mutableStateOf(restaurant?.michelinStatus?.name ?: MichelinStatus.ABSENT.name)
     }
+    var tagQuery by rememberSaveable(restaurant?.id) { mutableStateOf("") }
     var wishlistNote by rememberSaveable(restaurant?.id) {
         mutableStateOf(restaurant?.wishlist?.note.orEmpty())
     }
@@ -111,6 +112,8 @@ fun EditRestaurantScreen(
                 },
                 tags = tags,
                 onTagsChange = { tags = it },
+                tagQuery = tagQuery,
+                onTagQueryChange = { tagQuery = it },
                 knownTags = knownTags,
                 michelinStatus = MichelinStatus.valueOf(michelinName),
                 onMichelinStatusChange = { michelinName = it.name },
@@ -136,7 +139,7 @@ fun EditRestaurantScreen(
                                 buildRestaurantDraft(
                                     name = name,
                                     address = address,
-                                    tags = tags,
+                                    tags = listOf(tags, tagQuery).joinToString(","),
                                     knownTags = knownTags,
                                     michelinStatus = MichelinStatus.valueOf(michelinName),
                                     latitude = latitude,

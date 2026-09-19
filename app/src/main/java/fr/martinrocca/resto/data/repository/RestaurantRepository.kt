@@ -132,6 +132,15 @@ class RestaurantRepository(
         }
     }
 
+    suspend fun updateRestaurantTags(restaurantId: String, tags: List<String>) {
+        database.withTransaction {
+            val current = requireNotNull(dao.findRestaurant(restaurantId)) { "Restaurant introuvable." }
+            val now = System.currentTimeMillis()
+            replaceTags(restaurantId, tags, now)
+            dao.updateRestaurant(current.copy(updatedAt = now))
+        }
+    }
+
     suspend fun updateVisit(
         visitId: String,
         draft: VisitDraft,

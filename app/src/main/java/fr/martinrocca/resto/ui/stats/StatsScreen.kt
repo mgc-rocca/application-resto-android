@@ -1,6 +1,8 @@
 package fr.martinrocca.resto.ui.stats
 
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,10 +35,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.Restaurant
+import fr.martinrocca.resto.domain.model.michelinVisitCounts
+import fr.martinrocca.resto.theme.MichelinOutline
+import fr.martinrocca.resto.theme.MichelinRed
+import fr.martinrocca.resto.ui.components.MichelinLabel
 import fr.martinrocca.resto.ui.RestoViewModel
 import java.text.DecimalFormat
 import java.time.LocalDate
@@ -89,9 +97,7 @@ fun StatsScreen(
             visitCount = visits.size,
             averageRating = visits.map { it.overallRating }.average().takeUnless(Double::isNaN),
             wishlistCount = restaurants.count { it.wishlist != null },
-            michelinCount = restaurants.count {
-                it.isVisited && it.michelinStatus != MichelinStatus.ABSENT
-            },
+            michelinCounts = michelinVisitCounts(restaurants),
             mostFrequentTags = restaurants
                 .filter(Restaurant::isVisited)
                 .flatMap { it.tags }
@@ -129,12 +135,32 @@ fun StatsScreen(
             }
         }
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                StatCard("Envies", stats.wishlistCount.toString(), Modifier.weight(1f))
-                StatCard("Michelin", stats.michelinCount.toString(), Modifier.weight(1f))
+            StatCard("Envies", stats.wishlistCount.toString(), Modifier.fillMaxWidth())
+        }
+        item { Text("Guide Michelin", style = MaterialTheme.typography.titleLarge) }
+        stats.michelinCounts.entries.toList().chunked(2).forEach { row ->
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    row.forEach { (status, count) ->
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            color = Color.White,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, MichelinOutline),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(count.toString(), color = MichelinRed, style = MaterialTheme.typography.headlineMedium)
+                                MichelinLabel(status)
+                            }
+                        }
+                    }
+                }
             }
         }
         if (stats.mostFrequentTags.isNotEmpty()) {
@@ -283,6 +309,6 @@ private data class Stats(
     val visitCount: Int,
     val averageRating: Double?,
     val wishlistCount: Int,
-    val michelinCount: Int,
+    val michelinCounts: Map<MichelinStatus, Int>,
     val mostFrequentTags: List<Map.Entry<String, Int>>,
 )

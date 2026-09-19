@@ -34,7 +34,7 @@ fun RatingPicker(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(text = "Note · obligatoire", style = MaterialTheme.typography.titleMedium)
+        Text(text = "Note", style = MaterialTheme.typography.titleMedium)
         listOf(1..5, 6..10).forEach { ratings ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -69,12 +69,13 @@ fun RatingPicker(
                 }
             }
         }
-        Text(
-            text = selected?.let { "$it/10 · ${ratingLabel(it)}" }
-                ?: "Touchez une note de 1 à 10",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        selected?.let {
+            Text(
+                text = "$it/10 · ${ratingLabel(it)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -102,11 +103,11 @@ fun MichelinPicker(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             MichelinStatus.entries.forEach { status ->
-                FilterChip(
-                    selected = selected == status,
-                    onClick = { onSelected(status) },
-                    label = { Text(status.compactLabel) },
-                )
+                if (status == MichelinStatus.ABSENT) {
+                    FilterChip(selected == status, { onSelected(status) }, { Text("Absent") })
+                } else {
+                    MichelinFilterChip(status, selected == status) { onSelected(status) }
+                }
             }
         }
     }

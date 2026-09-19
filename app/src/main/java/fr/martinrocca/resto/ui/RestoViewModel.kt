@@ -66,6 +66,9 @@ class RestoViewModel(
         repository.updateRestaurant(restaurantId, draft, wishlistNote)
     }
 
+    suspend fun updateRestaurantTags(restaurantId: String, tags: List<String>): Result<Unit> =
+        runSuspendCatching { repository.updateRestaurantTags(restaurantId, tags) }
+
     suspend fun updateVisit(
         visitId: String,
         visit: VisitDraft,

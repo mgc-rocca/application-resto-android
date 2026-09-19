@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Place
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -31,6 +29,7 @@ fun RestaurantCard(
     restaurant: Restaurant,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showAddress: Boolean = true,
     trailingContent: (@Composable () -> Unit)? = null,
 ) {
     val latestVisit = restaurant.latestVisit
@@ -71,15 +70,9 @@ fun RestaurantCard(
                     )
                 }
                 if (restaurant.michelinStatus != MichelinStatus.ABSENT) {
-                    AssistChip(
-                        onClick = onClick,
-                        label = { Text(restaurant.michelinStatus.compactLabel) },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        ),
-                    )
+                    MichelinBadge(restaurant.michelinStatus)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (showAddress) Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Outlined.Place,
                         contentDescription = null,
