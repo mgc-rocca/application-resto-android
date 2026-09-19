@@ -42,6 +42,17 @@ fun MapScreen(
     var addressQuery by rememberSaveable { mutableStateOf("") }
     var filterName by rememberSaveable { mutableStateOf(MapFilter.ALL.name) }
     var cameraTarget by remember { mutableStateOf<MapTarget?>(null) }
+    var savedLatitude by rememberSaveable { mutableStateOf<Double?>(null) }
+    var savedLongitude by rememberSaveable { mutableStateOf<Double?>(null) }
+    var savedZoom by rememberSaveable { mutableStateOf<Double?>(null) }
+    var savedBearing by rememberSaveable { mutableStateOf(0.0) }
+    var savedTilt by rememberSaveable { mutableStateOf(0.0) }
+    val restoredCameraTarget = savedLatitude?.let { latitude ->
+        val longitude = savedLongitude ?: return@let null
+        val zoom = savedZoom ?: return@let null
+        MapTarget(latitude, longitude, zoom, savedBearing, savedTilt)
+    }
+    val isNetworkAvailable = rememberIsNetworkAvailable()
     val filter = MapFilter.valueOf(filterName)
     val mappedRestaurants = remember(restaurants, filter) {
         restaurants.filter { restaurant ->
@@ -100,10 +111,30 @@ fun MapScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (!isNetworkAvailable) {
+                Text(
+                    text = "Hors connexion : les marqueurs restent disponibles, mais le fond de carte et la recherche d’adresse peuvent être incomplets.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            Text(
+                text = "Le fond charge des tuiles OpenFreeMap. Les recherches saisies sont envoyées à Geoapify.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         RestaurantMap(
             restaurants = mappedRestaurants,
+            initialCameraTarget = restoredCameraTarget,
             cameraTarget = cameraTarget,
+            onCameraChanged = { target ->
+                savedLatitude = target.latitude
+                savedLongitude = target.longitude
+                savedZoom = target.zoom
+                savedBearing = target.bearing
+                savedTilt = target.tilt
+            },
             onRestaurantClick = onRestaurantClick,
             modifier = Modifier
                 .fillMaxWidth()
@@ -117,4 +148,6 @@ data class MapTarget(
     val latitude: Double,
     val longitude: Double,
     val zoom: Double,
+    val bearing: Double = 0.0,
+    val tilt: Double = 0.0,
 )
