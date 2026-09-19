@@ -18,7 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.domain.model.Restaurant
-import fr.martinrocca.resto.ui.add.CuisineTagField
+import fr.martinrocca.resto.ui.add.RestaurantTagsField
 import fr.martinrocca.resto.ui.add.canonicalizeTags
 import kotlinx.coroutines.launch
 
@@ -38,13 +38,13 @@ fun RestaurantTagsDialog(
     val scope = rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
-        title = { Text("Tags de cuisine") },
+        title = { Text("Tags du restaurant") },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                CuisineTagField(tags, { tags = it }, knownTags, query, { query = it })
+                RestaurantTagsField(tags, { tags = it }, knownTags, query, { query = it })
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
         },

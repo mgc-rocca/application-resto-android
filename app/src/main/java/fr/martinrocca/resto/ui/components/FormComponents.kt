@@ -1,28 +1,29 @@
 package fr.martinrocca.resto.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.domain.model.MichelinStatus
+import kotlin.math.roundToInt
 
 @Composable
 fun RatingPicker(
@@ -30,48 +31,45 @@ fun RatingPicker(
     onSelected: (Int?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var lastInteractionRating by remember(selected) { mutableIntStateOf(selected ?: 5) }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(text = "Note", style = MaterialTheme.typography.titleMedium)
-        listOf(1..5, 6..10).forEach { ratings ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                ratings.forEach { rating ->
-                    val isSelected = selected == rating
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isSelected) ratingColor(rating)
-                                else MaterialTheme.colorScheme.surfaceVariant,
-                            )
-                            .border(
-                                width = if (isSelected) 0.dp else 1.dp,
-                                color = if (isSelected) Color.Transparent
-                                else MaterialTheme.colorScheme.outline,
-                                shape = CircleShape,
-                            )
-                            .clickable { onSelected(rating) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = rating.toString(),
-                            color = if (isSelected) Color.White
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                }
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "Note", style = MaterialTheme.typography.titleMedium)
+            Text(selected?.let { "$it/10" } ?: "—/10", style = MaterialTheme.typography.titleLarge)
+        }
+        Slider(
+            value = (selected ?: 5).toFloat(),
+            onValueChange = {
+                lastInteractionRating = it.roundToInt().coerceIn(1, 10)
+                onSelected(lastInteractionRating)
+            },
+            // A tap on the initial thumb also explicitly selects 5, without silently assigning a note.
+            onValueChangeFinished = { if (selected == null) onSelected(lastInteractionRating) },
+            valueRange = 1f..10f,
+            steps = 8,
+            colors = SliderDefaults.colors(
+                thumbColor = ratingColor(selected),
+                activeTrackColor = ratingColor(selected),
+            ),
+            modifier = Modifier.fillMaxWidth().semantics {
+                contentDescription = "Note sur 10"
+                stateDescription = selected?.let { "$it sur 10" } ?: "Non renseignée"
+            },
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("1", style = MaterialTheme.typography.labelMedium)
+            Text("10", style = MaterialTheme.typography.labelMedium)
         }
         selected?.let {
             Text(
-                text = "$it/10 · ${ratingLabel(it)}",
+                text = ratingLabel(it),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

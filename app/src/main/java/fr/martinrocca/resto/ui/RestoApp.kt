@@ -11,6 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -23,6 +26,7 @@ import fr.martinrocca.resto.navigation.AppDestination
 import fr.martinrocca.resto.navigation.RestoBottomBar
 import fr.martinrocca.resto.navigation.Routes
 import fr.martinrocca.resto.domain.model.tagEquivalenceKey
+import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.ui.add.AddRestaurantScreen
 import fr.martinrocca.resto.ui.add.AddVisitScreen
 import fr.martinrocca.resto.ui.edit.EditRestaurantScreen
@@ -39,6 +43,7 @@ fun RestoApp(
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
+    var pendingJournalMichelin by rememberSaveable { mutableStateOf<String?>(null) }
     val restaurantsState by viewModel.restaurants.collectAsStateWithLifecycle()
     if (restaurantsState is RestaurantsUiState.Loading) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -105,6 +110,8 @@ fun RestoApp(
         ) {
             composable(AppDestination.Journal.route) {
                 JournalScreen(
+                    requestedMichelin = pendingJournalMichelin?.let(MichelinStatus::valueOf),
+                    onFilterApplied = { pendingJournalMichelin = null },
                     restaurants = restaurants,
                     onRestaurantClick = { navController.navigate(Routes.restaurant(it)) },
                     contentPadding = contentPadding,
@@ -128,6 +135,14 @@ fun RestoApp(
             }
             composable(AppDestination.Stats.route) {
                 StatsScreen(
+                    onMichelinClick = { status ->
+                        pendingJournalMichelin = status.name
+                        navController.navigate(AppDestination.Journal.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     restaurants = restaurants,
                     viewModel = viewModel,
                     contentPadding = contentPadding,

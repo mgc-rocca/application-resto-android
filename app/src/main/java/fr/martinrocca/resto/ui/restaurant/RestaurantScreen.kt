@@ -38,7 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
-import fr.martinrocca.resto.domain.model.MichelinStatus
+import fr.martinrocca.resto.domain.model.cuisineTags
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.Visit
 import fr.martinrocca.resto.domain.model.shareText
@@ -46,7 +46,7 @@ import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.BackHeader
 import fr.martinrocca.resto.ui.components.RatingBadge
 import fr.martinrocca.resto.ui.components.LocalPhoto
-import fr.martinrocca.resto.ui.components.MichelinBadge
+import fr.martinrocca.resto.ui.components.RestaurantDistinctions
 import fr.martinrocca.resto.ui.components.toFrenchDate
 import kotlinx.coroutines.launch
 
@@ -113,16 +113,14 @@ fun RestaurantScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(restaurant.name, style = MaterialTheme.typography.headlineLarge)
-                    if (restaurant.tags.isNotEmpty()) {
+                    if (restaurant.cuisineTags.isNotEmpty()) {
                         Text(
-                            text = restaurant.tags.joinToString(" · ") { it.name },
+                            text = restaurant.cuisineTags.joinToString(" · ") { it.name },
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    if (restaurant.michelinStatus != MichelinStatus.ABSENT) {
-                        MichelinBadge(restaurant.michelinStatus)
-                    }
+                    RestaurantDistinctions(restaurant)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Outlined.Place,

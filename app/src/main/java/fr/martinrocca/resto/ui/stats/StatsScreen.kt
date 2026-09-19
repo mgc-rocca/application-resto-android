@@ -35,11 +35,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.Restaurant
+import fr.martinrocca.resto.domain.model.cuisineTags
 import fr.martinrocca.resto.domain.model.michelinVisitCounts
 import fr.martinrocca.resto.theme.MichelinOutline
 import fr.martinrocca.resto.theme.MichelinRed
@@ -54,6 +56,7 @@ fun StatsScreen(
     restaurants: List<Restaurant>,
     viewModel: RestoViewModel,
     contentPadding: PaddingValues,
+    onMichelinClick: (MichelinStatus) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -100,7 +103,7 @@ fun StatsScreen(
             michelinCounts = michelinVisitCounts(restaurants),
             mostFrequentTags = restaurants
                 .filter(Restaurant::isVisited)
-                .flatMap { it.tags }
+                .flatMap { it.cuisineTags }
                 .groupingBy { it.name }
                 .eachCount()
                 .entries
@@ -135,7 +138,7 @@ fun StatsScreen(
             }
         }
         item {
-            StatCard("Envies", stats.wishlistCount.toString(), Modifier.fillMaxWidth())
+            StatCard("Envies", stats.wishlistCount.toString(), Modifier.fillMaxWidth(), inline = true)
         }
         item { Text("Guide Michelin", style = MaterialTheme.typography.titleLarge) }
         stats.michelinCounts.entries.toList().chunked(2).forEach { row ->
@@ -146,6 +149,7 @@ fun StatsScreen(
                 ) {
                     row.forEach { (status, count) ->
                         Surface(
+                            onClick = { onMichelinClick(status) },
                             modifier = Modifier.weight(1f),
                             color = Color.White,
                             shape = RoundedCornerShape(12.dp),
@@ -154,9 +158,10 @@ fun StatsScreen(
                             Column(
                                 modifier = Modifier.padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                Text(count.toString(), color = MichelinRed, style = MaterialTheme.typography.headlineMedium)
-                                MichelinLabel(status)
+                                MichelinLabel(status, prominent = true)
+                                Text(count.toString(), color = MichelinRed, style = MaterialTheme.typography.bodyLarge)
                             }
                         }
                     }
@@ -288,18 +293,30 @@ private fun StatCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
+    inline: Boolean = false,
 ) {
     Card(modifier = modifier) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(value, style = MaterialTheme.typography.headlineMedium)
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (inline) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(value, style = MaterialTheme.typography.headlineMedium)
+                Text(label, style = MaterialTheme.typography.titleMedium)
+            }
+        } else {
+            Column(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(value, style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

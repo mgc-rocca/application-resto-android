@@ -5,7 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.Typeface
+import android.view.Gravity
 import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -27,7 +27,6 @@ import fr.martinrocca.resto.ui.components.ratingColor
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -55,6 +54,7 @@ fun RestaurantMap(
     cameraTarget: MapTarget?,
     cameraRequestId: Int,
     deviceLocation: MapTarget?,
+    topContentInset: Int,
     onCameraChanged: (MapTarget) -> Unit,
     onRestaurantClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -64,7 +64,6 @@ fun RestaurantMap(
     val mapView = remember { MapView(context) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var markerStyle by remember { mutableStateOf<Style?>(null) }
-    var didPositionInitialCamera by remember { mutableStateOf(false) }
     val currentOnRestaurantClick by rememberUpdatedState(onRestaurantClick)
     val currentOnCameraChanged by rememberUpdatedState(onCameraChanged)
     val currentInitialCameraTarget by rememberUpdatedState(initialCameraTarget)
@@ -128,6 +127,11 @@ fun RestaurantMap(
                     map = mapLibreMap
                     mapLibreMap.uiSettings.isCompassEnabled = true
                     mapLibreMap.uiSettings.isAttributionEnabled = true
+                    mapLibreMap.uiSettings.compassGravity = Gravity.BOTTOM or Gravity.END
+                    val density = context.resources.displayMetrics.density
+                    mapLibreMap.uiSettings.setCompassMargins(0, 0, (24 * density).toInt(), (88 * density).toInt())
+                    val initialTarget = cameraTarget ?: currentInitialCameraTarget ?: PARIS_MAP_TARGET
+                    mapLibreMap.moveCamera(CameraUpdateFactory.newCameraPosition(initialTarget.toCameraPosition()))
                     mapLibreMap.setStyle(
                         Style.Builder().fromUri("asset://resto-map-style.json"),
                     ) { style ->
@@ -144,24 +148,11 @@ fun RestaurantMap(
         markerStyle
             ?.getSourceAs<GeoJsonSource>(MARKER_SOURCE_ID)
             ?.setGeoJson(restaurants.toFeatureCollection())
-        val currentMap = map
-        if (markerStyle != null && currentMap != null && !didPositionInitialCamera) {
-            didPositionInitialCamera = true
-            mapView.post {
-                val restoredTarget = cameraTarget ?: currentInitialCameraTarget
-                if (restoredTarget != null) {
-                    currentMap.moveCamera(
-                        CameraUpdateFactory.newCameraPosition(restoredTarget.toCameraPosition()),
-                    )
-                } else {
-                    positionCameraForRestaurants(
-                        map = currentMap,
-                        restaurants = restaurants,
-                        padding = (48 * context.resources.displayMetrics.density).toInt(),
-                    )
-                }
-            }
-        }
+    }
+
+    LaunchedEffect(map, topContentInset) {
+        // Keep camera targets in the visible area while rendering the map behind the overlay.
+        map?.moveCamera(CameraUpdateFactory.paddingTo(0.0, topContentInset.toDouble(), 0.0, 0.0))
     }
 
     DisposableEffect(map) {
@@ -218,7 +209,6 @@ private fun addMarkerAssets(style: Style, density: Float) {
             markerIconId(rating),
             createMarkerBitmap(
                 color = ratingColor(rating).toArgb(),
-                label = rating.toString(),
                 density = density,
             ),
         )
@@ -227,8 +217,8 @@ private fun addMarkerAssets(style: Style, density: Float) {
         WISHLIST_ICON_ID,
         createMarkerBitmap(
             color = ratingColor(null).toArgb(),
-            label = "+",
             density = density,
+            isWishlist = true,
         ),
     )
     style.addSource(
@@ -263,30 +253,7 @@ private fun List<Restaurant>.toFeatureCollection(): FeatureCollection = FeatureC
 
 private fun markerIconId(rating: Int): String = "resto-rating-$rating"
 
-private fun positionCameraForRestaurants(
-    map: MapLibreMap,
-    restaurants: List<Restaurant>,
-    padding: Int,
-) {
-    val positions = restaurants.mapNotNull { restaurant ->
-        val latitude = restaurant.latitude ?: return@mapNotNull null
-        val longitude = restaurant.longitude ?: return@mapNotNull null
-        LatLng(latitude, longitude)
-    }
-    when (positions.size) {
-        0 -> map.cameraPosition = CameraPosition.Builder()
-            .target(LatLng(48.8566, 2.3522))
-            .zoom(10.5)
-            .build()
-        1 -> map.moveCamera(CameraUpdateFactory.newLatLngZoom(positions.single(), 12.5))
-        else -> {
-            val bounds = LatLngBounds.Builder().apply {
-                positions.forEach { include(it) }
-            }.build()
-            map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
-        }
-    }
-}
+private val PARIS_MAP_TARGET = MapTarget(48.8566, 2.3522, 11.5)
 
 private fun MapTarget.toCameraPosition(): CameraPosition = CameraPosition.Builder()
     .target(LatLng(latitude, longitude))
@@ -307,8 +274,8 @@ private fun CameraPosition.toMapTarget(): MapTarget? = target?.let { center ->
 
 private fun createMarkerBitmap(
     color: Int,
-    label: String,
     density: Float,
+    isWishlist: Boolean = false,
 ): Bitmap {
     val width = (54 * density).toInt().coerceAtLeast(54)
     val height = (66 * density).toInt().coerceAtLeast(66)
@@ -326,14 +293,18 @@ private fun createMarkerBitmap(
         }
         canvas.drawPath(pointer, markerPaint)
         canvas.drawCircle(centerX, circleCenterY, circleRadius, markerPaint)
-        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             this.color = Color.WHITE
-            textAlign = Paint.Align.CENTER
-            textSize = circleRadius * 0.86f
-            typeface = Typeface.DEFAULT_BOLD
+            strokeWidth = 3 * density
+            strokeCap = Paint.Cap.ROUND
         }
-        val textY = circleCenterY - (textPaint.ascent() + textPaint.descent()) / 2f
-        canvas.drawText(label, centerX, textY, textPaint)
+        if (isWishlist) {
+            val arm = circleRadius * 0.28f
+            canvas.drawLine(centerX - arm, circleCenterY, centerX + arm, circleCenterY, centerPaint)
+            canvas.drawLine(centerX, circleCenterY - arm, centerX, circleCenterY + arm, centerPaint)
+        } else {
+            canvas.drawCircle(centerX, circleCenterY, circleRadius * 0.2f, centerPaint)
+        }
     }
 }
 

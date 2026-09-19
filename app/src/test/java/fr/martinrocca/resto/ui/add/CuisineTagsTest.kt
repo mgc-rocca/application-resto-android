@@ -5,6 +5,15 @@ import org.junit.Test
 
 class CuisineTagsTest {
     @Test
+    fun `reserved categories keep their canonical names when editing old tags`() {
+        val known = listOf("Qualité prix", "GASTRO", "Français")
+        assertEquals(
+            listOf("qualité-prix", "gastro", "Français"),
+            canonicalizeTags("Qualité/prix,qualité-prix,GASTRO,gastro,Français", known),
+        )
+    }
+
+    @Test
     fun `adding a suggestion preserves every selected tag and removes equivalent duplicates`() {
         val known = listOf("Italien", "Français", "Japonais")
         val first = canonicalizeTags("Italien,Français", known)
