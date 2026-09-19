@@ -38,10 +38,39 @@ Sans clé Geoapify, l’ajout manuel reste disponible. `local.properties` est ig
 ## Compiler et tester
 
 ```bash
-./gradlew testDebugUnitTest assembleDebug
+./gradlew --stop
+./gradlew testDebugUnitTest --no-daemon --max-workers=1
+./gradlew lintDebug --no-daemon --max-workers=1
+./gradlew assembleDebug --no-daemon --max-workers=1
 ```
 
 L’APK de développement est généré dans `app/build/outputs/apk/debug/app-debug.apk`. La version minimale prise en charge est Android 8.0 (API 26).
+
+## APK personnel et mises à jour
+
+Cette version vise une installation personnelle, pas une publication sur le Play Store. Elle conserve donc `targetSdk 35` et produit un APK debug simple à installer.
+
+Avant chaque mise à jour :
+
+1. exporter un ZIP depuis **Stats** et vérifier qu’il est bien présent ;
+2. conserver toujours la même clé de signature ; Android Studio utilise normalement `~/.android/debug.keystore` pour les APK debug ;
+3. sauvegarder ce fichier de clé dans un emplacement privé et ne jamais l’ajouter à Git ;
+4. installer la nouvelle version par-dessus l’ancienne, sans désinstaller l’application.
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+Si Android refuse la mise à jour pour une signature différente, ne désinstallez qu’après avoir exporté le ZIP. Il faudra ensuite installer le nouvel APK puis restaurer la sauvegarde.
+
+### Vérification rapide sur Fairphone /e/OS
+
+- ouvrir le journal, les envies, la carte et les statistiques ;
+- ajouter puis modifier un restaurant et une visite ;
+- joindre jusqu’à 5 photos, faire pivoter l’écran et rouvrir la visite ;
+- couper le réseau et vérifier que l’application reste utilisable hors carte/recherche ;
+- exporter un ZIP, ajouter une donnée temporaire, puis restaurer le ZIP ;
+- fermer complètement l’application et vérifier les données après réouverture.
 
 ## Sauvegardes
 
