@@ -8,6 +8,43 @@ import org.junit.Test
 
 class RestaurantFeaturesTest {
     @Test
+    fun `legacy quality price and gastro tags are categories and never cuisines`() {
+        val restaurant = restaurant(MichelinStatus.ABSENT).copy(
+            tags = listOf(Tag("t1", "Italien"), Tag("t2", "Qualité / prix"), Tag("t3", "GASTRO")),
+        )
+        assertEquals(listOf("Italien"), cuisineFilters(listOf(restaurant)).map { it.label })
+        assertEquals(RestaurantCategory.entries.toSet(), restaurant.categories)
+        assertTrue(restaurant.matchesFilters(null, null, setOf(RestaurantCategory.QUALITY_PRICE)))
+        assertFalse(restaurant.matchesFilters(null, tagEquivalenceKey("gastro")))
+        assertTrue(restaurant.shareText().contains("Cuisine : Italien\n"))
+        assertTrue(restaurant.shareText().contains("Tags : qualité-prix · gastro"))
+    }
+
+    @Test
+    fun `categories cuisine Michelin and minimum rating can all be combined`() {
+        val restaurant = restaurant(MichelinStatus.ONE_STAR).copy(
+            tags = listOf(Tag("t1", "Italien"), Tag("t2", "gastro")),
+        )
+        val categories = setOf(RestaurantCategory.GASTRO)
+        assertTrue(restaurant.matchesFilters(MichelinStatus.ONE_STAR, tagEquivalenceKey("italien"), categories, 8))
+        assertFalse(restaurant.matchesFilters(MichelinStatus.TWO_STARS, null, categories, 8))
+        assertFalse(restaurant.matchesFilters(null, null, RestaurantCategory.entries.toSet(), 8))
+        assertFalse(restaurant.matchesFilters(null, null, categories, 9))
+    }
+
+    @Test
+    fun `rating filters use the latest visit and exclude unrated wishes only when active`() {
+        val restaurant = restaurant(MichelinStatus.ABSENT)
+        val latest = restaurant.visits.single().copy(id = "new", date = LocalDate.of(2026, 9, 20), overallRating = 3)
+        val revisited = restaurant.copy(visits = listOf(latest) + restaurant.visits)
+        assertFalse(revisited.matchesFilters(null, null, minimumRating = 8))
+        assertTrue(revisited.matchesFilters(null, null, minimumRating = 3))
+        val wish = restaurant.copy(visits = emptyList())
+        assertTrue(wish.matchesFilters(null, null))
+        assertFalse(wish.matchesFilters(null, null, minimumRating = 1))
+    }
+
+    @Test
     fun `Michelin and cuisine filters are combined and any restaurant tag can match`() {
         val restaurant = restaurant(MichelinStatus.TWO_STARS)
         assertTrue(restaurant.matchesFilters(MichelinStatus.TWO_STARS, tagEquivalenceKey("italien")))

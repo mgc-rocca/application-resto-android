@@ -24,8 +24,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.domain.model.Restaurant
+import fr.martinrocca.resto.domain.model.cuisineFilters
 import fr.martinrocca.resto.ui.components.EmptyState
 import fr.martinrocca.resto.ui.components.RestaurantCard
+import fr.martinrocca.resto.ui.components.RestaurantFilters
+import fr.martinrocca.resto.ui.components.rememberRestaurantFilterState
 
 @Composable
 fun WishlistScreen(
@@ -36,9 +39,12 @@ fun WishlistScreen(
     modifier: Modifier = Modifier,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    val wishlist = remember(restaurants, query) {
+    val filters = rememberRestaurantFilterState()
+    val cuisines = remember(restaurants) { cuisineFilters(restaurants.filter { it.wishlist != null }) }
+    val wishlist = remember(restaurants, query, filters.michelin, filters.cuisineKey, filters.categories) {
         restaurants
             .filter { it.wishlist != null }
+            .filter(filters::matches)
             .filter {
                 query.isBlank() || listOf(
                     it.name,
@@ -80,6 +86,8 @@ fun WishlistScreen(
             )
         }
 
+        item { RestaurantFilters(state = filters, cuisines = cuisines) }
+
         if (wishlist.isEmpty()) {
             item {
                 EmptyState(
@@ -88,7 +96,9 @@ fun WishlistScreen(
                     } else {
                         "Aucun résultat"
                     },
-                    message = "Ajoutez ici les restaurants que vous souhaitez essayer plus tard.",
+                    message = if (restaurants.none { it.wishlist != null }) {
+                        "Ajoutez ici les restaurants que vous souhaitez essayer plus tard."
+                    } else "Essayez une autre recherche ou retirez les filtres actifs.",
                 )
             }
         } else {

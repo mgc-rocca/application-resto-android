@@ -37,7 +37,7 @@ fun GeoapifySearchField(
     search: suspend (String) -> Result<List<GeoapifySuggestion>>,
     onSuggestionSelected: (GeoapifySuggestion) -> Unit,
     modifier: Modifier = Modifier,
-    label: String = "Rechercher un restaurant ou une adresse",
+    label: String = "Rechercher",
 ) {
     var suggestions by remember { mutableStateOf(emptyList<GeoapifySuggestion>()) }
     var isLoading by remember { mutableStateOf(false) }

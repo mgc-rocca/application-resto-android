@@ -2,6 +2,7 @@ package fr.martinrocca.resto.ui.add
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +31,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.MichelinStatus
@@ -126,19 +131,22 @@ fun AddRestaurantScreen(
             )
 
             HorizontalDivider()
-            Text("Que souhaitez-vous faire ?", style = MaterialTheme.typography.titleLarge)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                OutlinedButton(
-                    onClick = { modeName = AddMode.WISHLIST.name },
-                    modifier = Modifier.weight(1f),
-                ) { Text("Envie") }
-                Button(
-                    onClick = { modeName = AddMode.VISIT.name },
-                    modifier = Modifier.weight(1f),
-                ) { Text("J’y suis allé") }
+                AddMode.entries.forEach { option ->
+                    val isSelected = mode == option
+                    OutlinedButton(
+                        onClick = { modeName = option.name },
+                        modifier = Modifier.weight(1f).semantics { selected = isSelected },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                        ),
+                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
+                    ) { Text(if (option == AddMode.WISHLIST) "Envie" else "J’y suis allé") }
+                }
             }
 
             when (mode) {
@@ -163,6 +171,7 @@ fun AddRestaurantScreen(
                     onPickPhotos = { photoPicker.launch("image/*") },
                     onClearPhotos = { photoUris = emptyList() },
                     canPickPhotos = photoUris.size < PhotoManager.MAX_PHOTOS_PER_VISIT,
+                    showTitle = false,
                 )
 
                 null -> Unit

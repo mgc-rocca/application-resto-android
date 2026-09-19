@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,35 +24,45 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.cuisineFilters
-import fr.martinrocca.resto.domain.model.matchesFilters
 import fr.martinrocca.resto.ui.components.EmptyState
 import fr.martinrocca.resto.ui.components.RestaurantCard
 import fr.martinrocca.resto.ui.components.RestaurantFilters
+import fr.martinrocca.resto.ui.components.rememberRestaurantFilterState
 
 @Composable
 fun JournalScreen(
     restaurants: List<Restaurant>,
     onRestaurantClick: (String) -> Unit,
     contentPadding: PaddingValues,
+    requestedMichelin: MichelinStatus? = null,
+    onFilterApplied: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    var michelinFilterName by rememberSaveable { mutableStateOf<String?>(null) }
-    var cuisineFilterKey by rememberSaveable { mutableStateOf<String?>(null) }
-    val michelinFilter = michelinFilterName?.let(MichelinStatus::valueOf)
+    val filters = rememberRestaurantFilterState()
+    val listState = rememberLazyListState()
+    LaunchedEffect(requestedMichelin) {
+        requestedMichelin?.let { status ->
+            filters.reset(status)
+            query = ""
+            listState.scrollToItem(0)
+            onFilterApplied()
+        }
+    }
     val focusManager = LocalFocusManager.current
     val cuisineFilters = remember(restaurants) {
         cuisineFilters(restaurants.filter(Restaurant::isVisited))
     }
 
-    val filteredRestaurants = remember(restaurants, query, michelinFilter, cuisineFilterKey) {
+    val filteredRestaurants = remember(restaurants, query, filters.michelin, filters.cuisineKey, filters.categories) {
         restaurants
             .asSequence()
             .filter(Restaurant::isVisited)
-            .filter { it.matchesFilters(michelinFilter, cuisineFilterKey) }
+            .filter(filters::matches)
             .filter { restaurant ->
                 query.isBlank() || restaurant.searchableText().contains(query.trim(), ignoreCase = true)
             }
@@ -64,6 +75,7 @@ fun JournalScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
+        state = listState,
         contentPadding = PaddingValues(
             start = 20.dp,
             top = contentPadding.calculateTopPadding() + 22.dp,
@@ -88,11 +100,8 @@ fun JournalScreen(
         }
         item {
             RestaurantFilters(
-                michelin = michelinFilter,
-                onMichelinChange = { michelinFilterName = it?.name },
+                state = filters,
                 cuisines = cuisineFilters,
-                cuisineKey = cuisineFilterKey,
-                onCuisineChange = { cuisineFilterKey = it },
             )
         }
 
@@ -120,6 +129,7 @@ fun JournalScreen(
                     restaurant = restaurant,
                     onClick = { onRestaurantClick(restaurant.id) },
                     showAddress = false,
+                    showLastVisit = false,
                 )
             }
         }

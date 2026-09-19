@@ -21,8 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.Restaurant
+import fr.martinrocca.resto.domain.model.cuisineTags
 
 @Composable
 fun RestaurantCard(
@@ -30,6 +30,7 @@ fun RestaurantCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     showAddress: Boolean = true,
+    showLastVisit: Boolean = true,
     trailingContent: (@Composable () -> Unit)? = null,
 ) {
     val latestVisit = restaurant.latestVisit
@@ -59,9 +60,9 @@ fun RestaurantCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (restaurant.tags.isNotEmpty()) {
+                if (restaurant.cuisineTags.isNotEmpty()) {
                     Text(
-                        text = restaurant.tags.joinToString(" · ") { it.name },
+                        text = restaurant.cuisineTags.joinToString(" · ") { it.name },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
@@ -69,9 +70,7 @@ fun RestaurantCard(
                         fontWeight = FontWeight.Medium,
                     )
                 }
-                if (restaurant.michelinStatus != MichelinStatus.ABSENT) {
-                    MichelinBadge(restaurant.michelinStatus)
-                }
+                RestaurantDistinctions(restaurant)
                 if (showAddress) Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Outlined.Place,
@@ -87,7 +86,7 @@ fun RestaurantCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                latestVisit?.let {
+                if (showLastVisit) latestVisit?.let {
                     Text(
                         text = "Dernière visite · ${it.date.toFrenchDate()}",
                         style = MaterialTheme.typography.bodyMedium,

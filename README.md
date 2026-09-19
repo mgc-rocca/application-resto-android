@@ -5,17 +5,18 @@ Resto est un carnet gastronomique Android personnel, local et sans compte. Il pe
 ## Fonctionnalités
 
 - Journal avec recherche dans les noms, adresses, tags et commentaires ;
-- filtres Michelin et cuisines, avec fiche détaillée par restaurant ;
+- filtres Michelin, qualité-prix, gastro et cuisines dans le Journal et les Envies ;
 - liste d’envies transformée automatiquement lors de la première visite ;
-- plusieurs visites par restaurant, avec une note unique de 1 à 10 ;
+- plusieurs visites par restaurant, avec une note unique de 1 à 10 choisie sur un slider ;
 - sélection de la date de visite dans un calendrier ;
 - réutilisation et normalisation des tags de cuisine déjà créés ;
 - jusqu’à 5 photos par visite, copiées dans le stockage privé de l’application ;
-- carte MapLibre avec fond OpenFreeMap, marqueurs terre cuite → sauge, filtres visites/envies, cuisine et Michelin ;
+- carte MapLibre avec fond OpenFreeMap, affichée sous un panneau transparent, centrée sur Paris au premier affichage ;
+- marqueurs terre cuite → sauge sans note chiffrée, filtres visites/envies, cuisine, catégories, Michelin et note minimale ;
 - localisation ponctuelle à la demande, via Android (sans dépendance aux services Google) ;
 - partage texte d’un restaurant vers WhatsApp ou toute application compatible ;
 - recherche et autocomplétion d’adresses avec Geoapify ;
-- statistiques locales ;
+- statistiques locales, avec accès au Journal filtré depuis chaque cartouche Michelin ;
 - modification et suppression confirmée des restaurants et visites ;
 - export et restauration d’une sauvegarde ZIP versionnée (JSON + photos).
 
@@ -83,6 +84,19 @@ Pour la version 0.3.0, vérifier aussi :
 - partager vers WhatsApp : nom, adresse, cuisines, distinction Michelin, dernière note personnelle et lien OpenStreetMap ;
 - vérifier que les compteurs Michelin ne mélangent pas les catégories et ne comptent que les restaurants visités.
 
+Pour la version 0.4.0 :
+
+- ouvrir une ancienne adresse portant « qualité-prix » ou « gastro » : ces tags apparaissent comme catégories, jamais comme cuisines ;
+- ajouter et modifier cuisines et catégories indépendamment, enregistrer puis rouvrir la fiche ;
+- vérifier les mêmes filtres dans Journal et Envies et leur conservation après rotation ;
+- choisir Envie puis J’y suis allé : seul le choix actif est coloré, le titre « La visite » n’apparaît pas dans ce formulaire ;
+- tester le slider à 1, 5 et 10, en glissant et en touchant directement la piste ;
+- ouvrir la carte sur Paris, rechercher une adresse, se localiser et faire pivoter l’écran : la caméra se conserve et les commandes restent accessibles ;
+- appliquer « ≥ 8/10 » : seules les adresses dont la dernière visite est notée au moins 8 apparaissent ; les envies non notées sont masquées jusqu’à réinitialisation ;
+- depuis Stats, toucher successivement Michelin et chaque nombre d’étoiles, avec une recherche et des filtres déjà actifs dans le Journal : la liste doit correspondre au compteur choisi.
+
+« qualité-prix » et « gastro » sont des catégories personnelles cumulables, indépendantes du classement officiel Michelin. Elles restent enregistrées comme tags dans les sauvegardes existantes.
+
 La permission de localisation est demandée uniquement au toucher de « Me localiser ». L’application ne suit pas la position en arrière-plan et ne l’enregistre pas dans le journal. Le fond de carte utilise OpenFreeMap ; les requêtes saisies pour chercher une adresse sont envoyées à Geoapify. Les commentaires et photos ne sont pas inclus dans le partage texte.
 
 ## Sauvegardes
@@ -103,6 +117,6 @@ Le ZIP n’est pas chiffré : il doit être conservé dans un emplacement privé
 - `navigation` : routes et barre de navigation ;
 - `theme` : identité visuelle beige, anthracite et vert sauge.
 
-La base Room est la source de vérité. Un restaurant est considéré comme visité s’il possède au moins une visite ; la note affichée dans les listes et sur la carte est celle de la visite la plus récente.
+La base Room est la source de vérité. Un restaurant est considéré comme visité s’il possède au moins une visite ; la note affichée dans les listes et utilisée pour les couleurs et le filtre de la carte est celle de la visite la plus récente.
 
 La base est actuellement en version 1. Toute évolution de schéma doit fournir une migration Room, conserver le JSON exporté dans `app/schemas` et ajouter un test de migration ; aucune migration destructive ne doit être utilisée.

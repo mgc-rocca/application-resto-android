@@ -33,6 +33,9 @@ import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.RestaurantDraft
+import fr.martinrocca.resto.domain.model.RestaurantCategory
+import fr.martinrocca.resto.domain.model.restaurantCategory
+import fr.martinrocca.resto.domain.model.isCuisineTag
 import fr.martinrocca.resto.domain.model.VisitDraft
 import fr.martinrocca.resto.domain.model.canonicalTagName
 import fr.martinrocca.resto.domain.model.tagEquivalenceKey
@@ -75,7 +78,7 @@ fun RestaurantFormFields(
             label = { Text("Adresse") },
             minLines = 2,
         )
-        CuisineTagField(
+        RestaurantTagsField(
             value = tags,
             onValueChange = onTagsChange,
             knownTags = knownTags,
@@ -101,13 +104,14 @@ fun VisitFormFields(
     onPickPhotos: () -> Unit,
     onClearPhotos: () -> Unit,
     canPickPhotos: Boolean = true,
+    showTitle: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Text("La visite", style = MaterialTheme.typography.headlineMedium)
+        if (showTitle) Text("La visite", style = MaterialTheme.typography.headlineMedium)
         VisitDatePicker(
             date = date,
             onDateChange = onDateChange,
@@ -185,6 +189,46 @@ fun buildVisitDraft(
 }
 
 @Composable
+fun RestaurantTagsField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    knownTags: List<String>,
+    query: String,
+    onQueryChange: (String) -> Unit,
+) {
+    val names = remember(value, knownTags) { canonicalizeTags(value, knownTags) }
+    val categories = names.mapNotNull(::restaurantCategory).toSet()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        CuisineTagField(
+            value = names.filter(::isCuisineTag).joinToString(", "),
+            onValueChange = { cuisines ->
+                onValueChange(canonicalizeTags(
+                    listOf(cuisines, categories.joinToString(",") { it.label }).joinToString(","),
+                    knownTags,
+                ).joinToString(", "))
+            },
+            knownTags = knownTags.filter(::isCuisineTag),
+            query = query,
+            onQueryChange = onQueryChange,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RestaurantCategory.entries.forEach { category ->
+                FilterChip(
+                    selected = category in categories,
+                    onClick = {
+                        val updated = if (category in categories) {
+                            names.filterNot { restaurantCategory(it) == category }
+                        } else names + category.label
+                        onValueChange(updated.joinToString(", "))
+                    },
+                    label = { Text(category.label) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
 @OptIn(ExperimentalLayoutApi::class)
 fun CuisineTagField(
     value: String,
@@ -240,8 +284,8 @@ fun CuisineTagField(
             },
         )
         if (suggestions.isNotEmpty()) {
-            Text(
-                text = if (query.isBlank()) "Tags existants" else "Suggestions",
+            if (query.isNotBlank()) Text(
+                text = "Suggestions",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

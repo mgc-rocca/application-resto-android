@@ -5,7 +5,8 @@ import java.net.URLEncoder
 fun Restaurant.shareText(): String = buildString {
     appendLine(name)
     appendLine(address)
-    if (tags.isNotEmpty()) appendLine("Cuisine : ${tags.joinToString(" · ") { it.name }}")
+    if (cuisineTags.isNotEmpty()) appendLine("Cuisine : ${cuisineTags.joinToString(" · ") { it.name }}")
+    if (categories.isNotEmpty()) appendLine("Tags : ${categories.joinToString(" · ") { it.label }}")
     if (michelinStatus != MichelinStatus.ABSENT) appendLine(michelinStatus.label)
     latestVisit?.let { appendLine("Ma note : ${it.overallRating}/10") }
     appendLine()

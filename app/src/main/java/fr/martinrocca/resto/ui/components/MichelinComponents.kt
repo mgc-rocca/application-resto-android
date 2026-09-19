@@ -28,20 +28,24 @@ import fr.martinrocca.resto.theme.MichelinOutline
 import fr.martinrocca.resto.theme.MichelinRed
 
 @Composable
-fun MichelinLabel(status: MichelinStatus, modifier: Modifier = Modifier) {
+fun MichelinLabel(status: MichelinStatus, modifier: Modifier = Modifier, prominent: Boolean = false) {
     Row(
         modifier = modifier.clearAndSetSemantics { contentDescription = status.label },
         horizontalArrangement = Arrangement.spacedBy(3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (status.stars == 0) {
-            Text(status.compactLabel, color = MichelinRed, style = MaterialTheme.typography.labelLarge)
+            Text(
+                status.compactLabel,
+                color = MichelinRed,
+                style = if (prominent) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.labelLarge,
+            )
         } else {
             repeat(status.stars) {
                 Icon(
                     painterResource(R.drawable.ic_michelin_star),
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(if (prominent) 28.dp else 20.dp),
                     tint = MichelinRed,
                 )
             }
