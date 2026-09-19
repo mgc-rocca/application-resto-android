@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -59,7 +60,7 @@ fun EditVisitScreen(
         val available = (20 - keptPhotoIds.size).coerceAtLeast(0)
         photoUris = (photoUris + uris.map { it.toString() }).distinct().take(available)
     }
-    var isSaving by rememberSaveable { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -135,23 +136,27 @@ fun EditVisitScreen(
                     scope.launch {
                         isSaving = true
                         errorMessage = null
-                        val result = runCatching {
-                            buildVisitDraft(
-                                date = date,
-                                overallRating = overallRating.takeIf { it > 0 },
-                                comment = comment,
-                                photoUris = photoUris,
+                        try {
+                            val result = runCatching {
+                                buildVisitDraft(
+                                    date = date,
+                                    overallRating = overallRating.takeIf { it > 0 },
+                                    comment = comment,
+                                    photoUris = photoUris,
+                                )
+                            }.fold(
+                                onSuccess = { draft ->
+                                    viewModel.updateVisit(visit.id, draft, keptPhotoIds.toSet())
+                                },
+                                onFailure = { Result.failure(it) },
                             )
-                        }.fold(
-                            onSuccess = { draft ->
-                                viewModel.updateVisit(visit.id, draft, keptPhotoIds.toSet())
-                            },
-                            onFailure = { Result.failure(it) },
-                        )
-                        result.onSuccess { onSaved() }.onFailure {
-                            errorMessage = it.message ?: "Impossible de modifier cette visite."
+                            result.onSuccess { onSaved() }.onFailure {
+                                errorMessage = it.message
+                                    ?: "Impossible de modifier cette visite."
+                            }
+                        } finally {
+                            isSaving = false
                         }
-                        isSaving = false
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

@@ -53,10 +53,13 @@ fun GeoapifySearchField(
         }
         delay(350)
         isLoading = true
-        search(query)
-            .onSuccess { suggestions = it }
-            .onFailure { error = it.message ?: "Recherche indisponible." }
-        isLoading = false
+        try {
+            search(query)
+                .onSuccess { suggestions = it }
+                .onFailure { error = it.message ?: "Recherche indisponible." }
+        } finally {
+            isLoading = false
+        }
     }
 
     Column(

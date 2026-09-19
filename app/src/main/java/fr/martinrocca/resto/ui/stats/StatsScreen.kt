@@ -51,6 +51,7 @@ fun StatsScreen(
     val scope = rememberCoroutineScope()
     var isWorking by remember { mutableStateOf(false) }
     var statusMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var statusIsError by rememberSaveable { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
@@ -59,11 +60,20 @@ fun StatsScreen(
             scope.launch {
                 isWorking = true
                 statusMessage = null
-                statusMessage = viewModel.exportBackup(uri).fold(
-                    onSuccess = { "Sauvegarde exportée avec succès." },
-                    onFailure = { it.message ?: "L’export a échoué." },
-                )
-                isWorking = false
+                try {
+                    statusMessage = viewModel.exportBackup(uri).fold(
+                        onSuccess = {
+                            statusIsError = false
+                            "Sauvegarde exportée avec succès."
+                        },
+                        onFailure = {
+                            statusIsError = true
+                            it.message ?: "L’export a échoué."
+                        },
+                    )
+                } finally {
+                    isWorking = false
+                }
             }
         }
     }
@@ -196,7 +206,11 @@ fun StatsScreen(
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (statusIsError) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
                 )
             }
         }
@@ -219,11 +233,20 @@ fun StatsScreen(
                         scope.launch {
                             isWorking = true
                             statusMessage = null
-                            statusMessage = viewModel.restoreBackup(uri).fold(
-                                onSuccess = { "Sauvegarde restaurée avec succès." },
-                                onFailure = { it.message ?: "La restauration a échoué." },
-                            )
-                            isWorking = false
+                            try {
+                                statusMessage = viewModel.restoreBackup(uri).fold(
+                                    onSuccess = {
+                                        statusIsError = false
+                                        "Sauvegarde restaurée avec succès."
+                                    },
+                                    onFailure = {
+                                        statusIsError = true
+                                        it.message ?: "La restauration a échoué."
+                                    },
+                                )
+                            } finally {
+                                isWorking = false
+                            }
                         }
                     },
                 ) {
