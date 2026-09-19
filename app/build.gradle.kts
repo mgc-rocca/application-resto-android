@@ -30,6 +30,8 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
         buildConfigField("String", "GEOAPIFY_API_KEY", "\"$geoapifyApiKey\"")
 
         vectorDrawables.useSupportLibrary = true
@@ -80,6 +82,8 @@ dependencies {
     implementation(libs.maplibre.android)
 
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
 

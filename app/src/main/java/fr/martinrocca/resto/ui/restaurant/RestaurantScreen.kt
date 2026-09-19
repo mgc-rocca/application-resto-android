@@ -155,6 +155,9 @@ fun RestaurantScreen(
                                 onClick = {
                                     scope.launch {
                                         viewModel.removeFromWishlist(restaurant.id)
+                                            .onSuccess {
+                                                if (!restaurant.isVisited) onDeleted()
+                                            }
                                             .onFailure { errorMessage = it.message }
                                     }
                                 },
@@ -221,10 +224,19 @@ fun RestaurantScreen(
     }
 
     visitToDelete?.let { visitId ->
+        val deletingLastVisit = restaurant?.visits?.size == 1
         AlertDialog(
             onDismissRequest = { visitToDelete = null },
             title = { Text("Supprimer cette visite ?") },
-            text = { Text("Ses photos seront aussi supprimées.") },
+            text = {
+                Text(
+                    if (deletingLastVisit) {
+                        "Ses photos seront aussi supprimées. Le restaurant sera conservé dans vos envies."
+                    } else {
+                        "Ses photos seront aussi supprimées."
+                    },
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {

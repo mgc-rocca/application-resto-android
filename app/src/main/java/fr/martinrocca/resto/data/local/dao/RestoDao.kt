@@ -36,6 +36,9 @@ interface RestoDao {
     @Query("SELECT * FROM visits WHERE id = :visitId LIMIT 1")
     suspend fun findVisit(visitId: String): VisitEntity?
 
+    @Query("SELECT COUNT(*) FROM visits WHERE restaurantId = :restaurantId")
+    suspend fun countVisitsForRestaurant(restaurantId: String): Int
+
     @Query("SELECT * FROM wishlist_entries WHERE restaurantId = :restaurantId LIMIT 1")
     suspend fun findWishlistEntry(restaurantId: String): WishlistEntryEntity?
 
