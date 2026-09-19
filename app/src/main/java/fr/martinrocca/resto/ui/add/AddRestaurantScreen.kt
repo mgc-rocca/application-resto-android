@@ -23,12 +23,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.BackHeader
@@ -66,10 +68,12 @@ fun AddRestaurantScreen(
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
     ) { uris ->
-        photoUris = (photoUris + uris.map { it.toString() }).distinct().take(20)
+        photoUris = (photoUris + uris.map { it.toString() })
+            .distinct()
+            .take(PhotoManager.MAX_PHOTOS_PER_VISIT)
     }
 
-    var isSaving by rememberSaveable { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -164,6 +168,7 @@ fun AddRestaurantScreen(
                     photoCount = photoUris.size,
                     onPickPhotos = { photoPicker.launch("image/*") },
                     onClearPhotos = { photoUris = emptyList() },
+                    canPickPhotos = photoUris.size < PhotoManager.MAX_PHOTOS_PER_VISIT,
                 )
 
                 null -> Unit
@@ -180,40 +185,50 @@ fun AddRestaurantScreen(
                         scope.launch {
                             isSaving = true
                             errorMessage = null
-                            val result = runCatching {
-                                val selectedMode = requireNotNull(mode) { "Choisissez une action." }
-                                val restaurant = buildRestaurantDraft(
-                                    name = name,
-                                    address = address,
-                                    tags = tags,
-                                    knownTags = knownTags,
-                                    michelinStatus = michelinStatus,
-                                    latitude = latitude,
-                                    longitude = longitude,
-                                    geoapifyPlaceId = geoapifyPlaceId,
-                                )
-                                when (selectedMode) {
-                                    AddMode.WISHLIST -> viewModel
-                                        .createWishlistRestaurant(restaurant, wishlistNote)
-                                        .getOrThrow()
-
-                                    AddMode.VISIT -> viewModel
-                                        .createVisitedRestaurant(
-                                            restaurant,
-                                            buildVisitDraft(
-                                                date = date,
-                                                overallRating = overallRating.takeIf { it > 0 },
-                                                comment = comment,
-                                                photoUris = photoUris,
-                                            ),
-                                        )
-                                        .getOrThrow()
+                            try {
+                                val input = runCatching {
+                                    val selectedMode = requireNotNull(mode) { "Choisissez une action." }
+                                    selectedMode to buildRestaurantDraft(
+                                        name = name,
+                                        address = address,
+                                        tags = tags,
+                                        knownTags = knownTags,
+                                        michelinStatus = michelinStatus,
+                                        latitude = latitude,
+                                        longitude = longitude,
+                                        geoapifyPlaceId = geoapifyPlaceId,
+                                    )
                                 }
+                                val result = input.fold(
+                                    onSuccess = { (selectedMode, restaurant) ->
+                                        when (selectedMode) {
+                                            AddMode.WISHLIST -> viewModel
+                                                .createWishlistRestaurant(restaurant, wishlistNote)
+
+                                            AddMode.VISIT -> runCatching {
+                                                buildVisitDraft(
+                                                    date = date,
+                                                    overallRating = overallRating.takeIf { it > 0 },
+                                                    comment = comment,
+                                                    photoUris = photoUris,
+                                                )
+                                            }.fold(
+                                                onSuccess = { visit ->
+                                                    viewModel.createVisitedRestaurant(restaurant, visit)
+                                                },
+                                                onFailure = { Result.failure(it) },
+                                            )
+                                        }
+                                    },
+                                    onFailure = { Result.failure(it) },
+                                )
+                                result.onSuccess(onSaved).onFailure {
+                                    errorMessage = it.message
+                                        ?: "Impossible d’enregistrer ce restaurant."
+                                }
+                            } finally {
+                                isSaving = false
                             }
-                            result.onSuccess(onSaved).onFailure {
-                                errorMessage = it.message ?: "Impossible d’enregistrer ce restaurant."
-                            }
-                            isSaving = false
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),

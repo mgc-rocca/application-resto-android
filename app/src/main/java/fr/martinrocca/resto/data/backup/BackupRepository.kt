@@ -1,6 +1,7 @@
 package fr.martinrocca.resto.data.backup
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.room.withTransaction
 import fr.martinrocca.resto.data.local.RestoDatabase
@@ -76,6 +77,7 @@ class BackupRepository(
             val manifestBytes = extracted.manifest
                 ?: throw IllegalArgumentException("La sauvegarde ne contient pas $MANIFEST_NAME.")
             val parsed = parseSnapshot(String(manifestBytes, Charsets.UTF_8))
+                .ensureVisibleRestaurants()
             validateSnapshot(parsed)
 
             val expectedPhotoEntries = parsed.photos.map(BackupPhoto::archivePath).toSet()
@@ -83,16 +85,28 @@ class BackupRepository(
                 "Le contenu photo de la sauvegarde est incomplet ou incohérent."
             }
 
-            val restoredPhotos = parsed.photos.map { archivedPhoto ->
-                val source = requireNotNull(extracted.photos[archivedPhoto.archivePath])
-                val extension = safeExtension(source)
-                val relativePath = "${PhotoManager.PHOTO_DIRECTORY}/${UUID.randomUUID()}.$extension"
-                val destination = photoManager.createDestination(relativePath)
-                source.inputStream().buffered().use { input ->
-                    destination.outputStream().buffered().use { output -> input.copyTo(output) }
+            val restoredPhotos = try {
+                parsed.photos.map { archivedPhoto ->
+                    val source = requireNotNull(extracted.photos[archivedPhoto.archivePath])
+                    require(
+                        archivedPhoto.entity.mimeType == null ||
+                            archivedPhoto.entity.mimeType.startsWith("image/"),
+                    ) { "Le type d’une photo est invalide." }
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeFile(source.path, bounds)
+                    require(bounds.outWidth > 0 && bounds.outHeight > 0) {
+                        "Une photo de la sauvegarde est illisible."
+                    }
+                    val extension = safeArchiveExtension(archivedPhoto.archivePath)
+                    val relativePath =
+                        "${PhotoManager.PHOTO_DIRECTORY}/${UUID.randomUUID()}.$extension"
+                    createdPhotoPaths += relativePath
+                    copyAtomically(source, photoManager.createDestination(relativePath))
+                    archivedPhoto.entity.copy(relativePath = relativePath)
                 }
-                createdPhotoPaths += relativePath
-                archivedPhoto.entity.copy(relativePath = relativePath)
+            } catch (error: Throwable) {
+                photoManager.deletePhotos(createdPhotoPaths)
+                throw error
             }
 
             val oldPhotoPaths = dao.getAllPhotos().map(PhotoEntity::relativePath)
@@ -222,7 +236,7 @@ class BackupRepository(
     private fun parseSnapshot(json: String): ParsedSnapshot {
         val root = JSONObject(json)
         require(root.getString("format") == FORMAT_NAME) { "Format de sauvegarde inconnu." }
-        require(root.getInt("version") == FORMAT_VERSION) {
+        require(isSupportedBackupVersion(root.getInt("version"))) {
             "Cette version de sauvegarde n’est pas prise en charge."
         }
         return ParsedSnapshot(
@@ -350,9 +364,14 @@ class BackupRepository(
         snapshot.wishlistEntries.forEach { entry ->
             require(entry.restaurantId in restaurantIds) { "Une envie référence un restaurant absent." }
         }
+        require(
+            snapshot.wishlistEntries.map(WishlistEntryEntity::restaurantId).distinct().size ==
+                snapshot.wishlistEntries.size,
+        ) { "Plusieurs envies référencent le même restaurant." }
         snapshot.dishes.forEach { dish ->
             require(dish.visitId in visitIds && dish.name.isNotBlank()) { "Un plat est invalide." }
             require(dish.priceCents == null || dish.priceCents >= 0) { "Un prix est invalide." }
+            require(dish.sortOrder >= 0) { "L’ordre d’un plat est invalide." }
         }
         snapshot.photos.forEach { photo ->
             require(photo.entity.visitId in visitIds) { "Une photo référence une visite absente." }
@@ -360,6 +379,7 @@ class BackupRepository(
             require(photo.archivePath.startsWith("photos/") && photo.archivePath.count { it == '/' } == 1) {
                 "Le chemin d’une photo est invalide."
             }
+            require(photo.entity.sortOrder >= 0) { "L’ordre d’une photo est invalide." }
         }
         require(snapshot.photos.map(BackupPhoto::archivePath).distinct().size == snapshot.photos.size) {
             "Plusieurs photos utilisent le même chemin."
@@ -370,6 +390,26 @@ class BackupRepository(
         .lowercase()
         .takeIf { it.matches(EXTENSION_REGEX) }
         ?: "jpg"
+
+    private fun safeArchiveExtension(archivePath: String): String = archivePath
+        .substringAfterLast('.', missingDelimiterValue = "")
+        .lowercase()
+        .takeIf { it.matches(EXTENSION_REGEX) }
+        ?: "jpg"
+
+    private fun copyAtomically(source: File, destination: File) {
+        val partial = File(destination.parentFile, ".${destination.name}.${UUID.randomUUID()}.tmp")
+        try {
+            source.inputStream().buffered().use { input ->
+                partial.outputStream().buffered().use { output -> input.copyTo(output) }
+            }
+            check(partial.renameTo(destination)) {
+                "Impossible de finaliser la restauration d’une photo."
+            }
+        } finally {
+            partial.delete()
+        }
+    }
 
     private data class ArchivedPhoto(
         val entity: PhotoEntity,
@@ -389,7 +429,6 @@ class BackupRepository(
 
     companion object {
         private const val FORMAT_NAME = "fr.martinrocca.resto"
-        private const val FORMAT_VERSION = 1
         private const val MANIFEST_NAME = "backup.json"
         private const val MAX_ARCHIVE_ENTRIES = 10_000
         private const val MAX_RECORDS = 100_000
@@ -420,6 +459,22 @@ private data class ParsedSnapshot(
     val photos: List<BackupPhoto>,
 )
 
+private fun ParsedSnapshot.ensureVisibleRestaurants(): ParsedSnapshot {
+    val visibleRestaurantIds =
+        visits.map(VisitEntity::restaurantId).toSet() +
+            wishlistEntries.map(WishlistEntryEntity::restaurantId)
+    val restoredWishlistEntries = restaurants
+        .filterNot { it.id in visibleRestaurantIds }
+        .map { restaurant ->
+            WishlistEntryEntity(
+                restaurantId = restaurant.id,
+                addedAt = restaurant.updatedAt,
+                note = null,
+            )
+        }
+    return copy(wishlistEntries = wishlistEntries + restoredWishlistEntries)
+}
+
 private data class BackupPhoto(
     val entity: PhotoEntity,
     val archivePath: String,
@@ -427,7 +482,7 @@ private data class BackupPhoto(
 
 private fun BackupSnapshot.toJson(photoPaths: Map<PhotoEntity, String>): JSONObject = JSONObject().apply {
     put("format", "fr.martinrocca.resto")
-    put("version", 1)
+    put("version", CURRENT_BACKUP_VERSION)
     put("exportedAt", Instant.now().toString())
     put("restaurants", restaurants.toJsonArray { restaurant ->
         JSONObject().apply {
@@ -529,7 +584,7 @@ private fun <T> List<T>.uniqueIds(
     label: String,
 ): Set<String> {
     val ids = map(selector)
-    require(ids.all(String::isNotBlank) && ids.distinct().size == ids.size) {
+    require(ids.all(::isSafeBackupId) && ids.distinct().size == ids.size) {
         "Les identifiants de $label sont invalides."
     }
     return ids.toSet()

@@ -2,11 +2,16 @@ package fr.martinrocca.resto.ui
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -34,7 +39,23 @@ fun RestoApp(
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
-    val restaurants by viewModel.restaurants.collectAsStateWithLifecycle()
+    val restaurantsState by viewModel.restaurants.collectAsStateWithLifecycle()
+    if (restaurantsState is RestaurantsUiState.Loading) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+    if (restaurantsState is RestaurantsUiState.Error) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = (restaurantsState as RestaurantsUiState.Error).message,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        return
+    }
+    val restaurants = (restaurantsState as RestaurantsUiState.Ready).restaurants
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute in AppDestination.topLevel.map { it.route }

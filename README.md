@@ -10,7 +10,7 @@ Resto est un carnet gastronomique Android personnel, local et sans compte. Il pe
 - plusieurs visites par restaurant, avec une note unique de 1 à 10 ;
 - sélection de la date de visite dans un calendrier ;
 - réutilisation et normalisation des tags de cuisine déjà créés ;
-- jusqu’à 20 photos par visite, copiées dans le stockage privé de l’application ;
+- jusqu’à 5 photos par visite, copiées dans le stockage privé de l’application ;
 - carte MapLibre avec fond OpenFreeMap, marqueurs colorés par note et filtre visites/envies ;
 - recherche et autocomplétion d’adresses avec Geoapify ;
 - statistiques locales ;
@@ -38,14 +38,45 @@ Sans clé Geoapify, l’ajout manuel reste disponible. `local.properties` est ig
 ## Compiler et tester
 
 ```bash
-./gradlew testDebugUnitTest assembleDebug
+./gradlew --stop
+./gradlew testDebugUnitTest --no-daemon --max-workers=1
+./gradlew lintDebug --no-daemon --max-workers=1
+./gradlew assembleDebug --no-daemon --max-workers=1
 ```
 
 L’APK de développement est généré dans `app/build/outputs/apk/debug/app-debug.apk`. La version minimale prise en charge est Android 8.0 (API 26).
 
+## APK personnel et mises à jour
+
+Cette version vise une installation personnelle, pas une publication sur le Play Store. Elle conserve donc `targetSdk 35` et produit un APK debug simple à installer.
+
+Avant chaque mise à jour :
+
+1. exporter un ZIP depuis **Stats** et vérifier qu’il est bien présent ;
+2. conserver toujours la même clé de signature ; Android Studio utilise normalement `~/.android/debug.keystore` pour les APK debug ;
+3. sauvegarder ce fichier de clé dans un emplacement privé et ne jamais l’ajouter à Git ;
+4. installer la nouvelle version par-dessus l’ancienne, sans désinstaller l’application.
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+Si Android refuse la mise à jour pour une signature différente, ne désinstallez qu’après avoir exporté le ZIP. Il faudra ensuite installer le nouvel APK puis restaurer la sauvegarde.
+
+### Vérification rapide sur Fairphone /e/OS
+
+- ouvrir le journal, les envies, la carte et les statistiques ;
+- ajouter puis modifier un restaurant et une visite ;
+- joindre jusqu’à 5 photos, faire pivoter l’écran et rouvrir la visite ;
+- couper le réseau et vérifier que l’application reste utilisable hors carte/recherche ;
+- exporter un ZIP, ajouter une donnée temporaire, puis restaurer le ZIP ;
+- fermer complètement l’application et vérifier les données après réouverture.
+
 ## Sauvegardes
 
 L’écran **Stats** permet d’exporter un ZIP puis de le restaurer via le sélecteur de fichiers Android. La restauration valide d’abord le format, les relations entre les données et la présence de chaque photo. La base existante n’est remplacée que si la sauvegarde est cohérente.
+
+Le ZIP n’est pas chiffré : il doit être conservé dans un emplacement privé. Le format 1 restera lisible lors des évolutions futures de l’application.
 
 ## Architecture
 
@@ -60,3 +91,5 @@ L’écran **Stats** permet d’exporter un ZIP puis de le restaurer via le sél
 - `theme` : identité visuelle beige, anthracite et vert sauge.
 
 La base Room est la source de vérité. Un restaurant est considéré comme visité s’il possède au moins une visite ; la note affichée dans les listes et sur la carte est celle de la visite la plus récente.
+
+La base est actuellement en version 1. Toute évolution de schéma doit fournir une migration Room, conserver le JSON exporté dans `app/schemas` et ajouter un test de migration ; aucune migration destructive ne doit être utilisée.

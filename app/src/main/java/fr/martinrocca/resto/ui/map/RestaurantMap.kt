@@ -27,6 +27,7 @@ import fr.martinrocca.resto.domain.model.ratingBand
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -45,7 +46,9 @@ import org.maplibre.geojson.Point
 @Composable
 fun RestaurantMap(
     restaurants: List<Restaurant>,
+    initialCameraTarget: MapTarget?,
     cameraTarget: MapTarget?,
+    onCameraChanged: (MapTarget) -> Unit,
     onRestaurantClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -54,7 +57,10 @@ fun RestaurantMap(
     val mapView = remember { MapView(context) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var markerStyle by remember { mutableStateOf<Style?>(null) }
+    var didPositionInitialCamera by remember { mutableStateOf(false) }
     val currentOnRestaurantClick by rememberUpdatedState(onRestaurantClick)
+    val currentOnCameraChanged by rememberUpdatedState(onCameraChanged)
+    val currentInitialCameraTarget by rememberUpdatedState(initialCameraTarget)
 
     DisposableEffect(mapView, lifecycle) {
         var started = false
@@ -119,7 +125,6 @@ fun RestaurantMap(
                         Style.Builder().fromUri("asset://resto-map-style.json"),
                     ) { style ->
                         addMarkerAssets(style, context.resources.displayMetrics.density)
-                        mapLibreMap.cameraPosition = initialCamera(restaurants)
                         markerStyle = style
                     }
                 }
@@ -132,6 +137,24 @@ fun RestaurantMap(
         markerStyle
             ?.getSourceAs<GeoJsonSource>(MARKER_SOURCE_ID)
             ?.setGeoJson(restaurants.toFeatureCollection())
+        val currentMap = map
+        if (markerStyle != null && currentMap != null && !didPositionInitialCamera) {
+            didPositionInitialCamera = true
+            mapView.post {
+                val restoredTarget = currentInitialCameraTarget
+                if (restoredTarget != null) {
+                    currentMap.moveCamera(
+                        CameraUpdateFactory.newCameraPosition(restoredTarget.toCameraPosition()),
+                    )
+                } else {
+                    positionCameraForRestaurants(
+                        map = currentMap,
+                        restaurants = restaurants,
+                        padding = (48 * context.resources.displayMetrics.density).toInt(),
+                    )
+                }
+            }
+        }
     }
 
     DisposableEffect(map) {
@@ -145,17 +168,22 @@ fun RestaurantMap(
             feature?.getStringProperty(RESTAURANT_ID_PROPERTY)?.let(currentOnRestaurantClick)
             feature != null
         }
+        val cameraListener = MapLibreMap.OnCameraIdleListener {
+            currentMap.cameraPosition.toMapTarget()?.let(currentOnCameraChanged)
+        }
         currentMap.addOnMapClickListener(clickListener)
-        onDispose { currentMap.removeOnMapClickListener(clickListener) }
+        currentMap.addOnCameraIdleListener(cameraListener)
+        onDispose {
+            currentMap.cameraPosition.toMapTarget()?.let(currentOnCameraChanged)
+            currentMap.removeOnMapClickListener(clickListener)
+            currentMap.removeOnCameraIdleListener(cameraListener)
+        }
     }
 
     LaunchedEffect(map, cameraTarget) {
         val target = cameraTarget ?: return@LaunchedEffect
         map?.animateCamera(
-            CameraUpdateFactory.newLatLngZoom(
-                LatLng(target.latitude, target.longitude),
-                target.zoom,
-            ),
+            CameraUpdateFactory.newCameraPosition(target.toCameraPosition()),
             700,
         )
     }
@@ -212,17 +240,46 @@ private fun List<Restaurant>.toFeatureCollection(): FeatureCollection = FeatureC
 
 private fun markerIconId(rating: Int): String = "resto-rating-$rating"
 
-private fun initialCamera(restaurants: List<Restaurant>): CameraPosition {
-    val firstRestaurant = restaurants.firstOrNull { it.latitude != null && it.longitude != null }
-    return CameraPosition.Builder()
-        .target(
-            LatLng(
-                firstRestaurant?.latitude ?: 48.8566,
-                firstRestaurant?.longitude ?: 2.3522,
-            ),
-        )
-        .zoom(if (firstRestaurant == null) 10.5 else 12.5)
-        .build()
+private fun positionCameraForRestaurants(
+    map: MapLibreMap,
+    restaurants: List<Restaurant>,
+    padding: Int,
+) {
+    val positions = restaurants.mapNotNull { restaurant ->
+        val latitude = restaurant.latitude ?: return@mapNotNull null
+        val longitude = restaurant.longitude ?: return@mapNotNull null
+        LatLng(latitude, longitude)
+    }
+    when (positions.size) {
+        0 -> map.cameraPosition = CameraPosition.Builder()
+            .target(LatLng(48.8566, 2.3522))
+            .zoom(10.5)
+            .build()
+        1 -> map.moveCamera(CameraUpdateFactory.newLatLngZoom(positions.single(), 12.5))
+        else -> {
+            val bounds = LatLngBounds.Builder().apply {
+                positions.forEach { include(it) }
+            }.build()
+            map.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
+        }
+    }
+}
+
+private fun MapTarget.toCameraPosition(): CameraPosition = CameraPosition.Builder()
+    .target(LatLng(latitude, longitude))
+    .zoom(zoom)
+    .bearing(bearing)
+    .tilt(tilt)
+    .build()
+
+private fun CameraPosition.toMapTarget(): MapTarget? = target?.let { center ->
+    MapTarget(
+        latitude = center.latitude,
+        longitude = center.longitude,
+        zoom = zoom,
+        bearing = bearing,
+        tilt = tilt,
+    )
 }
 
 private fun markerColor(rating: Int?): Int = when (ratingBand(rating)) {

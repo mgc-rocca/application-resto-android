@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -155,6 +155,9 @@ fun RestaurantScreen(
                                 onClick = {
                                     scope.launch {
                                         viewModel.removeFromWishlist(restaurant.id)
+                                            .onSuccess {
+                                                if (!restaurant.isVisited) onDeleted()
+                                            }
                                             .onFailure { errorMessage = it.message }
                                     }
                                 },
@@ -221,10 +224,19 @@ fun RestaurantScreen(
     }
 
     visitToDelete?.let { visitId ->
+        val deletingLastVisit = restaurant?.visits?.size == 1
         AlertDialog(
             onDismissRequest = { visitToDelete = null },
             title = { Text("Supprimer cette visite ?") },
-            text = { Text("Ses photos seront aussi supprimées.") },
+            text = {
+                Text(
+                    if (deletingLastVisit) {
+                        "Ses photos seront aussi supprimées. Le restaurant sera conservé dans vos envies."
+                    } else {
+                        "Ses photos seront aussi supprimées."
+                    },
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -284,11 +296,13 @@ private fun VisitCard(
             if (visit.photos.isNotEmpty()) {
                 HorizontalDivider()
                 Text("Photos", style = MaterialTheme.typography.titleMedium)
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    visit.photos.forEachIndexed { index, photo ->
+                    itemsIndexed(
+                        items = visit.photos,
+                        key = { _, photo -> photo.id },
+                    ) { index, photo ->
                         LocalPhoto(
                             relativePath = photo.relativePath,
                             contentDescription = "Photo ${index + 1} de la visite",

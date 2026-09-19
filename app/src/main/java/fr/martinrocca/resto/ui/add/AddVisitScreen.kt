@@ -19,11 +19,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.BackHeader
@@ -45,9 +47,11 @@ fun AddVisitScreen(
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
     ) { uris ->
-        photoUris = (photoUris + uris.map { it.toString() }).distinct().take(20)
+        photoUris = (photoUris + uris.map { it.toString() })
+            .distinct()
+            .take(PhotoManager.MAX_PHOTOS_PER_VISIT)
     }
-    var isSaving by rememberSaveable { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -96,6 +100,7 @@ fun AddVisitScreen(
                 photoCount = photoUris.size,
                 onPickPhotos = { photoPicker.launch("image/*") },
                 onClearPhotos = { photoUris = emptyList() },
+                canPickPhotos = photoUris.size < PhotoManager.MAX_PHOTOS_PER_VISIT,
             )
             errorMessage?.let {
                 Text(text = it, color = MaterialTheme.colorScheme.error)
@@ -106,19 +111,25 @@ fun AddVisitScreen(
                     scope.launch {
                         isSaving = true
                         errorMessage = null
-                        val result = runCatching {
-                            val visit = buildVisitDraft(
-                                date = date,
-                                overallRating = overallRating.takeIf { it > 0 },
-                                comment = comment,
-                                photoUris = photoUris,
+                        try {
+                            val draft = runCatching {
+                                buildVisitDraft(
+                                    date = date,
+                                    overallRating = overallRating.takeIf { it > 0 },
+                                    comment = comment,
+                                    photoUris = photoUris,
+                                )
+                            }
+                            val result = draft.fold(
+                                onSuccess = { viewModel.addVisit(restaurant.id, it) },
+                                onFailure = { Result.failure(it) },
                             )
-                            viewModel.addVisit(restaurant.id, visit).getOrThrow()
+                            result.onSuccess { onSaved() }.onFailure {
+                                errorMessage = it.message ?: "Impossible d’enregistrer cette visite."
+                            }
+                        } finally {
+                            isSaving = false
                         }
-                        result.onSuccess { onSaved() }.onFailure {
-                            errorMessage = it.message ?: "Impossible d’enregistrer cette visite."
-                        }
-                        isSaving = false
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

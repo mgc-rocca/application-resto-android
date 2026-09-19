@@ -2,10 +2,8 @@ package fr.martinrocca.resto.ui.edit
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -13,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -23,11 +23,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.Visit
 import fr.martinrocca.resto.ui.RestoViewModel
@@ -56,10 +58,10 @@ fun EditVisitScreen(
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
     ) { uris ->
-        val available = (20 - keptPhotoIds.size).coerceAtLeast(0)
+        val available = (PhotoManager.MAX_PHOTOS_PER_VISIT - keptPhotoIds.size).coerceAtLeast(0)
         photoUris = (photoUris + uris.map { it.toString() }).distinct().take(available)
     }
-    var isSaving by rememberSaveable { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -96,11 +98,10 @@ fun EditVisitScreen(
             if (keptPhotos.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Photos actuelles", style = MaterialTheme.typography.titleMedium)
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        keptPhotos.forEach { photo ->
+                        items(keptPhotos, key = { it.id }) { photo ->
                             Column {
                                 LocalPhoto(
                                     relativePath = photo.relativePath,
@@ -127,6 +128,8 @@ fun EditVisitScreen(
                 photoCount = photoUris.size,
                 onPickPhotos = { photoPicker.launch("image/*") },
                 onClearPhotos = { photoUris = emptyList() },
+                canPickPhotos =
+                    keptPhotoIds.size + photoUris.size < PhotoManager.MAX_PHOTOS_PER_VISIT,
             )
             errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Button(
@@ -135,23 +138,27 @@ fun EditVisitScreen(
                     scope.launch {
                         isSaving = true
                         errorMessage = null
-                        val result = runCatching {
-                            buildVisitDraft(
-                                date = date,
-                                overallRating = overallRating.takeIf { it > 0 },
-                                comment = comment,
-                                photoUris = photoUris,
+                        try {
+                            val result = runCatching {
+                                buildVisitDraft(
+                                    date = date,
+                                    overallRating = overallRating.takeIf { it > 0 },
+                                    comment = comment,
+                                    photoUris = photoUris,
+                                )
+                            }.fold(
+                                onSuccess = { draft ->
+                                    viewModel.updateVisit(visit.id, draft, keptPhotoIds.toSet())
+                                },
+                                onFailure = { Result.failure(it) },
                             )
-                        }.fold(
-                            onSuccess = { draft ->
-                                viewModel.updateVisit(visit.id, draft, keptPhotoIds.toSet())
-                            },
-                            onFailure = { Result.failure(it) },
-                        )
-                        result.onSuccess { onSaved() }.onFailure {
-                            errorMessage = it.message ?: "Impossible de modifier cette visite."
+                            result.onSuccess { onSaved() }.onFailure {
+                                errorMessage = it.message
+                                    ?: "Impossible de modifier cette visite."
+                            }
+                        } finally {
+                            isSaving = false
                         }
-                        isSaving = false
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

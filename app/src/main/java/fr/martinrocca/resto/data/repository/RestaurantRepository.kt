@@ -143,10 +143,15 @@ class RestaurantRepository(
         require(keptPhotoIds.all { id -> currentPhotos.any { it.id == id } }) {
             "La sélection de photos est invalide."
         }
-        val importedPhotos = photoManager.importPhotos(draft.photoUris)
         val photosToKeep = currentPhotos
             .filter { it.id in keptPhotoIds }
             .sortedBy(PhotoEntity::sortOrder)
+        val availablePhotoSlots =
+            (PhotoManager.MAX_PHOTOS_PER_VISIT - photosToKeep.size).coerceAtLeast(0)
+        require(draft.photoUris.distinct().size <= availablePhotoSlots) {
+            "Une visite ne peut pas contenir plus de ${PhotoManager.MAX_PHOTOS_PER_VISIT} photos."
+        }
+        val importedPhotos = photoManager.importPhotos(draft.photoUris)
         val removedPaths = currentPhotos
             .filterNot { it.id in keptPhotoIds }
             .map(PhotoEntity::relativePath)
@@ -194,13 +199,44 @@ class RestaurantRepository(
     }
 
     suspend fun removeFromWishlist(restaurantId: String) {
-        dao.deleteWishlistEntry(restaurantId)
+        database.withTransaction {
+            val restaurant = requireNotNull(dao.findRestaurant(restaurantId)) {
+                "Restaurant introuvable."
+            }
+            val visitCount = dao.countVisitsForRestaurant(restaurantId)
+            if (RestaurantVisibilityPolicy.deleteAfterWishlistRemoval(visitCount)) {
+                dao.deleteRestaurant(restaurant)
+            } else {
+                dao.deleteWishlistEntry(restaurantId)
+            }
+        }
     }
 
     suspend fun deleteVisit(visitId: String) {
         val photoPaths = database.withTransaction {
+            val visit = requireNotNull(dao.findVisit(visitId)) { "Visite introuvable." }
             val paths = dao.getPhotosForVisit(visitId).map(PhotoEntity::relativePath)
             dao.deleteVisit(visitId)
+            val remainingVisitCount = dao.countVisitsForRestaurant(visit.restaurantId)
+            val wishlistEntry = dao.findWishlistEntry(visit.restaurantId)
+            val now = System.currentTimeMillis()
+            if (
+                RestaurantVisibilityPolicy.addWishlistAfterLastVisitRemoval(
+                    remainingVisitCount = remainingVisitCount,
+                    hasWishlistEntry = wishlistEntry != null,
+                )
+            ) {
+                dao.upsertWishlistEntry(
+                    WishlistEntryEntity(
+                        restaurantId = visit.restaurantId,
+                        addedAt = now,
+                        note = null,
+                    ),
+                )
+            }
+            dao.findRestaurant(visit.restaurantId)?.let { restaurant ->
+                dao.updateRestaurant(restaurant.copy(updatedAt = now))
+            }
             paths
         }
         photoManager.deletePhotos(photoPaths)
@@ -302,6 +338,16 @@ class RestaurantRepository(
         require(draft.address.isNotBlank()) { "L’adresse du restaurant est obligatoire." }
         require((draft.latitude == null) == (draft.longitude == null)) {
             "Les coordonnées doivent comporter une latitude et une longitude."
+        }
+        draft.latitude?.let { latitude ->
+            require(latitude.isFinite() && latitude in -90.0..90.0) {
+                "La latitude doit être comprise entre -90 et 90."
+            }
+        }
+        draft.longitude?.let { longitude ->
+            require(longitude.isFinite() && longitude in -180.0..180.0) {
+                "La longitude doit être comprise entre -180 et 180."
+            }
         }
     }
 

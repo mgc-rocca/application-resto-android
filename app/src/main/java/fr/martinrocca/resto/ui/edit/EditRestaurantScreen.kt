@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -42,7 +43,7 @@ fun EditRestaurantScreen(
 ) {
     var name by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.name.orEmpty()) }
     var address by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.address.orEmpty()) }
-    var searchQuery by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.address.orEmpty()) }
+    var searchQuery by rememberSaveable(restaurant?.id) { mutableStateOf("") }
     var latitude by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.latitude) }
     var longitude by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.longitude) }
     var placeId by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.geoapifyPlaceId) }
@@ -55,7 +56,7 @@ fun EditRestaurantScreen(
     var wishlistNote by rememberSaveable(restaurant?.id) {
         mutableStateOf(restaurant?.wishlist?.note.orEmpty())
     }
-    var isSaving by rememberSaveable { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -130,22 +131,32 @@ fun EditRestaurantScreen(
                     scope.launch {
                         isSaving = true
                         errorMessage = null
-                        val draft = buildRestaurantDraft(
-                            name = name,
-                            address = address,
-                            tags = tags,
-                            knownTags = knownTags,
-                            michelinStatus = MichelinStatus.valueOf(michelinName),
-                            latitude = latitude,
-                            longitude = longitude,
-                            geoapifyPlaceId = placeId,
-                        )
-                        viewModel.updateRestaurant(restaurant.id, draft, wishlistNote)
-                            .onSuccess { onSaved() }
-                            .onFailure {
-                                errorMessage = it.message ?: "Impossible de modifier ce restaurant."
+                        try {
+                            val draft = runCatching {
+                                buildRestaurantDraft(
+                                    name = name,
+                                    address = address,
+                                    tags = tags,
+                                    knownTags = knownTags,
+                                    michelinStatus = MichelinStatus.valueOf(michelinName),
+                                    latitude = latitude,
+                                    longitude = longitude,
+                                    geoapifyPlaceId = placeId,
+                                )
                             }
-                        isSaving = false
+                            val result = draft.fold(
+                                onSuccess = {
+                                    viewModel.updateRestaurant(restaurant.id, it, wishlistNote)
+                                },
+                                onFailure = { Result.failure(it) },
+                            )
+                            result.onSuccess { onSaved() }.onFailure {
+                                errorMessage = it.message
+                                    ?: "Impossible de modifier ce restaurant."
+                            }
+                        } finally {
+                            isSaving = false
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
