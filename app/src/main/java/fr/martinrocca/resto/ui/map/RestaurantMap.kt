@@ -169,12 +169,12 @@ fun RestaurantMap(
             feature != null
         }
         val cameraListener = MapLibreMap.OnCameraIdleListener {
-            currentOnCameraChanged(currentMap.cameraPosition.toMapTarget())
+            currentMap.cameraPosition.toMapTarget()?.let(currentOnCameraChanged)
         }
         currentMap.addOnMapClickListener(clickListener)
         currentMap.addOnCameraIdleListener(cameraListener)
         onDispose {
-            currentOnCameraChanged(currentMap.cameraPosition.toMapTarget())
+            currentMap.cameraPosition.toMapTarget()?.let(currentOnCameraChanged)
             currentMap.removeOnMapClickListener(clickListener)
             currentMap.removeOnCameraIdleListener(cameraListener)
         }
@@ -272,13 +272,15 @@ private fun MapTarget.toCameraPosition(): CameraPosition = CameraPosition.Builde
     .tilt(tilt)
     .build()
 
-private fun CameraPosition.toMapTarget(): MapTarget = MapTarget(
-    latitude = target.latitude,
-    longitude = target.longitude,
-    zoom = zoom,
-    bearing = bearing,
-    tilt = tilt,
-)
+private fun CameraPosition.toMapTarget(): MapTarget? = target?.let { center ->
+    MapTarget(
+        latitude = center.latitude,
+        longitude = center.longitude,
+        zoom = zoom,
+        bearing = bearing,
+        tilt = tilt,
+    )
+}
 
 private fun markerColor(rating: Int?): Int = when (ratingBand(rating)) {
     RatingBand.VERY_LOW -> Color.rgb(182, 106, 92)
