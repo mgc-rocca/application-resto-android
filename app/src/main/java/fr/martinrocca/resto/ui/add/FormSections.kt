@@ -4,13 +4,21 @@ import android.app.DatePickerDialog
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -20,13 +28,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.RestaurantDraft
 import fr.martinrocca.resto.domain.model.VisitDraft
 import fr.martinrocca.resto.domain.model.canonicalTagName
-import fr.martinrocca.resto.domain.model.normalizeTagName
 import fr.martinrocca.resto.domain.model.tagEquivalenceKey
 import fr.martinrocca.resto.domain.model.tagSuggestionScore
 import fr.martinrocca.resto.ui.components.MichelinPicker
@@ -42,6 +50,8 @@ fun RestaurantFormFields(
     onAddressChange: (String) -> Unit,
     tags: String,
     onTagsChange: (String) -> Unit,
+    tagQuery: String,
+    onTagQueryChange: (String) -> Unit,
     knownTags: List<String>,
     michelinStatus: MichelinStatus,
     onMichelinStatusChange: (MichelinStatus) -> Unit,
@@ -69,6 +79,8 @@ fun RestaurantFormFields(
             value = tags,
             onValueChange = onTagsChange,
             knownTags = knownTags,
+            query = tagQuery,
+            onQueryChange = onTagQueryChange,
         )
         MichelinPicker(
             selected = michelinStatus,
@@ -173,39 +185,63 @@ fun buildVisitDraft(
 }
 
 @Composable
-private fun CuisineTagField(
+@OptIn(ExperimentalLayoutApi::class)
+fun CuisineTagField(
     value: String,
     onValueChange: (String) -> Unit,
     knownTags: List<String>,
+    query: String,
+    onQueryChange: (String) -> Unit,
 ) {
-    val currentToken = value.substringAfterLast(',').trim()
-    val selectedNames = remember(value) {
-        value.split(',').map(String::trim).filter(String::isNotEmpty)
+    val selectedNames = remember(value, knownTags) {
+        canonicalizeTags(value, knownTags)
     }
-    val suggestions = remember(currentToken, knownTags) {
+    val suggestions = remember(query, knownTags, selectedNames) {
         knownTags
             .filter(String::isNotBlank)
             .distinctBy(::tagEquivalenceKey)
-            .map { it to tagSuggestionScore(currentToken, it) }
-            .filter { currentToken.isBlank() || it.second != Int.MAX_VALUE }
+            .filterNot { name -> selectedNames.any { tagEquivalenceKey(it) == tagEquivalenceKey(name) } }
+            .map { it to tagSuggestionScore(query, it) }
+            .filter { query.isBlank() || it.second != Int.MAX_VALUE }
             .sortedWith(compareBy<Pair<String, Int>> { it.second }.thenBy { it.first.lowercase() })
-            .take(if (currentToken.isBlank()) 12 else 6)
+            .take(if (query.isBlank()) 12 else 6)
             .map(Pair<String, Int>::first)
+    }
+    fun addTags(input: String) {
+        onValueChange(canonicalizeTags("$value,$input", knownTags).joinToString(", "))
+        onQueryChange("")
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (selectedNames.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                selectedNames.forEach { name ->
+                    InputChip(
+                        selected = true,
+                        onClick = { onValueChange(selectedNames.filterNot { it == name }.joinToString(", ")) },
+                        label = { Text(name) },
+                        trailingIcon = { Icon(Icons.Outlined.Close, "Retirer $name") },
+                    )
+                }
+            }
+        }
         OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
+            value = query,
+            onValueChange = onQueryChange,
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Types de cuisine") },
-            supportingText = {
-                Text("Séparez les tags par des virgules ou choisissez un tag existant.")
+            label = { Text("Ajouter un tag de cuisine") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { addTags(query) }),
+            trailingIcon = {
+                IconButton(onClick = { addTags(query) }, enabled = query.isNotBlank()) {
+                    Icon(Icons.Outlined.Add, "Ajouter le tag")
+                }
             },
         )
         if (suggestions.isNotEmpty()) {
             Text(
-                text = if (currentToken.isBlank()) "Tags existants" else "Suggestions",
+                text = if (query.isBlank()) "Tags existants" else "Suggestions",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -214,14 +250,9 @@ private fun CuisineTagField(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 suggestions.forEach { suggestion ->
-                    val selected = selectedNames.any {
-                        normalizeTagName(it) == normalizeTagName(suggestion)
-                    }
                     FilterChip(
-                        selected = selected,
-                        onClick = {
-                            onValueChange(toggleTag(value, suggestion, selected))
-                        },
+                        selected = false,
+                        onClick = { addTags(suggestion) },
                         label = { Text(suggestion) },
                     )
                 }
@@ -259,25 +290,7 @@ private fun VisitDatePicker(
     }
 }
 
-private fun toggleTag(value: String, suggestion: String, selected: Boolean): String {
-    val parts = value.split(',').map(String::trim)
-    if (selected) {
-        return parts
-            .filter(String::isNotEmpty)
-            .filterNot { normalizeTagName(it) == normalizeTagName(suggestion) }
-            .joinToString(", ")
-    }
-    val completed = if (parts.lastOrNull().isNullOrBlank()) {
-        parts.filter(String::isNotEmpty)
-    } else {
-        parts.dropLast(1).filter(String::isNotEmpty)
-    }
-    return (completed + suggestion)
-        .distinctBy(::tagEquivalenceKey)
-        .joinToString(", ")
-}
-
-private fun canonicalizeTags(value: String, knownTags: List<String>): List<String> {
+fun canonicalizeTags(value: String, knownTags: List<String>): List<String> {
     val canonicalNames = knownTags.toMutableList()
     val result = mutableListOf<String>()
     value.split(',')

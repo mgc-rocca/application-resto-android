@@ -11,7 +11,9 @@ Resto est un carnet gastronomique Android personnel, local et sans compte. Il pe
 - sélection de la date de visite dans un calendrier ;
 - réutilisation et normalisation des tags de cuisine déjà créés ;
 - jusqu’à 5 photos par visite, copiées dans le stockage privé de l’application ;
-- carte MapLibre avec fond OpenFreeMap, marqueurs colorés par note et filtre visites/envies ;
+- carte MapLibre avec fond OpenFreeMap, marqueurs terre cuite → sauge, filtres visites/envies, cuisine et Michelin ;
+- localisation ponctuelle à la demande, via Android (sans dépendance aux services Google) ;
+- partage texte d’un restaurant vers WhatsApp ou toute application compatible ;
 - recherche et autocomplétion d’adresses avec Geoapify ;
 - statistiques locales ;
 - modification et suppression confirmée des restaurants et visites ;
@@ -71,6 +73,17 @@ Si Android refuse la mise à jour pour une signature différente, ne désinstall
 - couper le réseau et vérifier que l’application reste utilisable hors carte/recherche ;
 - exporter un ZIP, ajouter une donnée temporaire, puis restaurer le ZIP ;
 - fermer complètement l’application et vérifier les données après réouverture.
+
+Pour la version 0.3.0, vérifier aussi :
+
+- combiner cuisine et Michelin sur la carte, puis réinitialiser les filtres ;
+- autoriser une position approximative ou précise, refuser l’autorisation et essayer avec la localisation désactivée ;
+- quitter la carte pendant une recherche de position : la demande doit s’arrêter ;
+- ajouter plusieurs tags successifs, retirer un tag, enregistrer et rouvrir la fiche ;
+- partager vers WhatsApp : nom, adresse, cuisines, distinction Michelin, dernière note personnelle et lien OpenStreetMap ;
+- vérifier que les compteurs Michelin ne mélangent pas les catégories et ne comptent que les restaurants visités.
+
+La permission de localisation est demandée uniquement au toucher de « Me localiser ». L’application ne suit pas la position en arrière-plan et ne l’enregistre pas dans le journal. Le fond de carte utilise OpenFreeMap ; les requêtes saisies pour chercher une adresse sont envoyées à Geoapify. Les commentaires et photos ne sont pas inclus dans le partage texte.
 
 ## Sauvegardes
 

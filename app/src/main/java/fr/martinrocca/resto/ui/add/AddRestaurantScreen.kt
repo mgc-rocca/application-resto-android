@@ -55,6 +55,7 @@ fun AddRestaurantScreen(
     var longitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var geoapifyPlaceId by rememberSaveable { mutableStateOf<String?>(null) }
     var tags by rememberSaveable { mutableStateOf("") }
+    var tagQuery by rememberSaveable { mutableStateOf("") }
     var michelinName by rememberSaveable { mutableStateOf(MichelinStatus.ABSENT.name) }
     val michelinStatus = MichelinStatus.valueOf(michelinName)
     var modeName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -79,7 +80,7 @@ fun AddRestaurantScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = { BackHeader(title = "Ajouter", onBack = onBack) },
+        topBar = { BackHeader(title = "Nouvelle adresse", onBack = onBack) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -90,15 +91,6 @@ fun AddRestaurantScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Nouvelle adresse", style = MaterialTheme.typography.headlineLarge)
-                Text(
-                    text = "Recherchez l’établissement pour récupérer son adresse et ses coordonnées, ou saisissez-le manuellement.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
             GeoapifySearchField(
                 query = searchQuery,
                 onQueryChange = { searchQuery = it },
@@ -126,6 +118,8 @@ fun AddRestaurantScreen(
                 },
                 tags = tags,
                 onTagsChange = { tags = it },
+                tagQuery = tagQuery,
+                onTagQueryChange = { tagQuery = it },
                 knownTags = knownTags,
                 michelinStatus = michelinStatus,
                 onMichelinStatusChange = { michelinName = it.name },
@@ -140,7 +134,7 @@ fun AddRestaurantScreen(
                 OutlinedButton(
                     onClick = { modeName = AddMode.WISHLIST.name },
                     modifier = Modifier.weight(1f),
-                ) { Text("Ajouter aux envies") }
+                ) { Text("Envie") }
                 Button(
                     onClick = { modeName = AddMode.VISIT.name },
                     modifier = Modifier.weight(1f),
@@ -191,7 +185,7 @@ fun AddRestaurantScreen(
                                     selectedMode to buildRestaurantDraft(
                                         name = name,
                                         address = address,
-                                        tags = tags,
+                                        tags = listOf(tags, tagQuery).joinToString(","),
                                         knownTags = knownTags,
                                         michelinStatus = michelinStatus,
                                         latitude = latitude,
