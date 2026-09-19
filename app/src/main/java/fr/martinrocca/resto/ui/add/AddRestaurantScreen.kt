@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.BackHeader
@@ -67,7 +68,9 @@ fun AddRestaurantScreen(
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
     ) { uris ->
-        photoUris = (photoUris + uris.map { it.toString() }).distinct().take(20)
+        photoUris = (photoUris + uris.map { it.toString() })
+            .distinct()
+            .take(PhotoManager.MAX_PHOTOS_PER_VISIT)
     }
 
     var isSaving by remember { mutableStateOf(false) }
@@ -165,6 +168,7 @@ fun AddRestaurantScreen(
                     photoCount = photoUris.size,
                     onPickPhotos = { photoPicker.launch("image/*") },
                     onClearPhotos = { photoUris = emptyList() },
+                    canPickPhotos = photoUris.size < PhotoManager.MAX_PHOTOS_PER_VISIT,
                 )
 
                 null -> Unit

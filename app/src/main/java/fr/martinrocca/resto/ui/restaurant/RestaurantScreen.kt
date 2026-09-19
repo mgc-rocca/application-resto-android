@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -296,11 +296,13 @@ private fun VisitCard(
             if (visit.photos.isNotEmpty()) {
                 HorizontalDivider()
                 Text("Photos", style = MaterialTheme.typography.titleMedium)
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    visit.photos.forEachIndexed { index, photo ->
+                    itemsIndexed(
+                        items = visit.photos,
+                        key = { _, photo -> photo.id },
+                    ) { index, photo ->
                         LocalPhoto(
                             relativePath = photo.relativePath,
                             contentDescription = "Photo ${index + 1} de la visite",

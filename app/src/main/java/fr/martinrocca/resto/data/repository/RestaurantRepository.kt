@@ -143,10 +143,15 @@ class RestaurantRepository(
         require(keptPhotoIds.all { id -> currentPhotos.any { it.id == id } }) {
             "La sélection de photos est invalide."
         }
-        val importedPhotos = photoManager.importPhotos(draft.photoUris)
         val photosToKeep = currentPhotos
             .filter { it.id in keptPhotoIds }
             .sortedBy(PhotoEntity::sortOrder)
+        val availablePhotoSlots =
+            (PhotoManager.MAX_PHOTOS_PER_VISIT - photosToKeep.size).coerceAtLeast(0)
+        require(draft.photoUris.distinct().size <= availablePhotoSlots) {
+            "Une visite ne peut pas contenir plus de ${PhotoManager.MAX_PHOTOS_PER_VISIT} photos."
+        }
+        val importedPhotos = photoManager.importPhotos(draft.photoUris)
         val removedPaths = currentPhotos
             .filterNot { it.id in keptPhotoIds }
             .map(PhotoEntity::relativePath)

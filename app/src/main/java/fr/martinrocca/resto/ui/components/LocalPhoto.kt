@@ -2,6 +2,8 @@ package fr.martinrocca.resto.ui.components
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -43,7 +45,7 @@ fun LocalPhoto(
             if (!file.path.startsWith(root.path + File.separator) || !file.isFile) {
                 null
             } else {
-                decodeSampledBitmap(file, 1_024)
+                decodeSampledBitmap(file, 512)
             }
         }
     }
@@ -78,14 +80,53 @@ private fun decodeSampledBitmap(file: File, requestedSize: Int): Bitmap? {
     BitmapFactory.decodeFile(file.path, bounds)
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
-    var sampleSize = 1
-    while (bounds.outWidth / (sampleSize * 2) >= requestedSize &&
-        bounds.outHeight / (sampleSize * 2) >= requestedSize
-    ) {
-        sampleSize *= 2
-    }
-    return BitmapFactory.decodeFile(
+    val bitmap = BitmapFactory.decodeFile(
         file.path,
-        BitmapFactory.Options().apply { inSampleSize = sampleSize },
-    )
+        BitmapFactory.Options().apply {
+            inSampleSize = calculateInSampleSize(
+                width = bounds.outWidth,
+                height = bounds.outHeight,
+                requestedSize = requestedSize,
+            )
+        },
+    ) ?: return null
+    return applyExifOrientation(file, bitmap)
+}
+
+private fun applyExifOrientation(file: File, bitmap: Bitmap): Bitmap {
+    val orientation = runCatching {
+        ExifInterface(file.path).getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL,
+        )
+    }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+    val matrix = Matrix().apply {
+        when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> setScale(-1f, 1f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> setRotate(180f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> setScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                setRotate(90f)
+                postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_90 -> setRotate(90f)
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                setRotate(-90f)
+                postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_270 -> setRotate(-90f)
+        }
+    }
+    if (matrix.isIdentity) return bitmap
+    return Bitmap.createBitmap(
+        bitmap,
+        0,
+        0,
+        bitmap.width,
+        bitmap.height,
+        matrix,
+        true,
+    ).also { transformed ->
+        if (transformed !== bitmap) bitmap.recycle()
+    }
 }

@@ -10,7 +10,7 @@ Resto est un carnet gastronomique Android personnel, local et sans compte. Il pe
 - plusieurs visites par restaurant, avec une note unique de 1 à 10 ;
 - sélection de la date de visite dans un calendrier ;
 - réutilisation et normalisation des tags de cuisine déjà créés ;
-- jusqu’à 20 photos par visite, copiées dans le stockage privé de l’application ;
+- jusqu’à 5 photos par visite, copiées dans le stockage privé de l’application ;
 - carte MapLibre avec fond OpenFreeMap, marqueurs colorés par note et filtre visites/envies ;
 - recherche et autocomplétion d’adresses avec Geoapify ;
 - statistiques locales ;

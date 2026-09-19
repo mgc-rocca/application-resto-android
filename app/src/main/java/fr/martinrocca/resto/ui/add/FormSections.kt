@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.RestaurantDraft
 import fr.martinrocca.resto.domain.model.VisitDraft
@@ -87,6 +88,7 @@ fun VisitFormFields(
     photoCount: Int,
     onPickPhotos: () -> Unit,
     onClearPhotos: () -> Unit,
+    canPickPhotos: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -113,9 +115,17 @@ fun VisitFormFields(
             Text("Photos", style = MaterialTheme.typography.titleMedium)
             OutlinedButton(
                 onClick = onPickPhotos,
+                enabled = canPickPhotos,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (photoCount == 0) "Ajouter des photos" else "$photoCount photos sélectionnées")
+                Text(
+                    when {
+                        !canPickPhotos -> "Limite de ${PhotoManager.MAX_PHOTOS_PER_VISIT} photos atteinte"
+                        photoCount == 0 -> "Ajouter des photos (${PhotoManager.MAX_PHOTOS_PER_VISIT} max)"
+                        photoCount == 1 -> "1 photo sélectionnée"
+                        else -> "$photoCount photos sélectionnées"
+                    },
+                )
             }
             if (photoCount > 0) {
                 TextButton(onClick = onClearPhotos) {

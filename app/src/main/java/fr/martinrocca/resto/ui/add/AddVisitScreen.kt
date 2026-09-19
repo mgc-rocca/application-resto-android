@@ -25,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.BackHeader
@@ -46,7 +47,9 @@ fun AddVisitScreen(
     val photoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents(),
     ) { uris ->
-        photoUris = (photoUris + uris.map { it.toString() }).distinct().take(20)
+        photoUris = (photoUris + uris.map { it.toString() })
+            .distinct()
+            .take(PhotoManager.MAX_PHOTOS_PER_VISIT)
     }
     var isSaving by remember { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -97,6 +100,7 @@ fun AddVisitScreen(
                 photoCount = photoUris.size,
                 onPickPhotos = { photoPicker.launch("image/*") },
                 onClearPhotos = { photoUris = emptyList() },
+                canPickPhotos = photoUris.size < PhotoManager.MAX_PHOTOS_PER_VISIT,
             )
             errorMessage?.let {
                 Text(text = it, color = MaterialTheme.colorScheme.error)
