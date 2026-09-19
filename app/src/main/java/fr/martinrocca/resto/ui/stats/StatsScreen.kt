@@ -196,7 +196,7 @@ fun StatsScreen(
         }
         item {
             Text(
-                text = "Le fichier ZIP contient toutes les données et les photos. Une restauration remplace le journal actuel.",
+                text = "Le fichier ZIP contient toutes les données et les photos. Il n’est pas chiffré : conservez-le dans un emplacement privé. Une restauration remplace le journal actuel.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

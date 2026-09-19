@@ -47,6 +47,8 @@ L’APK de développement est généré dans `app/build/outputs/apk/debug/app-de
 
 L’écran **Stats** permet d’exporter un ZIP puis de le restaurer via le sélecteur de fichiers Android. La restauration valide d’abord le format, les relations entre les données et la présence de chaque photo. La base existante n’est remplacée que si la sauvegarde est cohérente.
 
+Le ZIP n’est pas chiffré : il doit être conservé dans un emplacement privé. Le format 1 restera lisible lors des évolutions futures de l’application.
+
 ## Architecture
 
 - `data/local` : entités, relations, DAO et base Room ;
@@ -60,3 +62,5 @@ L’écran **Stats** permet d’exporter un ZIP puis de le restaurer via le sél
 - `theme` : identité visuelle beige, anthracite et vert sauge.
 
 La base Room est la source de vérité. Un restaurant est considéré comme visité s’il possède au moins une visite ; la note affichée dans les listes et sur la carte est celle de la visite la plus récente.
+
+La base est actuellement en version 1. Toute évolution de schéma doit fournir une migration Room, conserver le JSON exporté dans `app/schemas` et ajouter un test de migration ; aucune migration destructive ne doit être utilisée.

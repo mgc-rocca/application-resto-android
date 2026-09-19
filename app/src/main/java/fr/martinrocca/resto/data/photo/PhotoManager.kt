@@ -22,8 +22,11 @@ data class ImportedPhoto(
 class PhotoManager(
     private val context: Context,
 ) {
-    private val photoDirectory: File
-        get() = File(context.filesDir, PHOTO_DIRECTORY).apply { mkdirs() }
+    private val photoDirectory: File = File(context.filesDir, PHOTO_DIRECTORY).apply {
+        mkdirs()
+        listFiles { file -> file.isFile && file.name.endsWith(".tmp") }
+            ?.forEach(File::delete)
+    }
 
     suspend fun importPhotos(uriStrings: List<String>): List<ImportedPhoto> = withContext(Dispatchers.IO) {
         val selectedUris = uriStrings.distinct()
