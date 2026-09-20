@@ -2,6 +2,7 @@ package fr.martinrocca.resto.ui.journal
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,7 +32,8 @@ import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.cuisineFilters
 import fr.martinrocca.resto.ui.components.EmptyState
 import fr.martinrocca.resto.ui.components.JournalRestaurantCard
-import fr.martinrocca.resto.ui.components.RestaurantFilters
+import fr.martinrocca.resto.ui.components.RestaurantFilterSheet
+import fr.martinrocca.resto.ui.components.RestaurantFiltersButton
 import fr.martinrocca.resto.ui.components.rememberRestaurantFilterState
 
 @Composable
@@ -43,6 +46,7 @@ fun JournalScreen(
     modifier: Modifier = Modifier,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
+    var showFilters by rememberSaveable { mutableStateOf(false) }
     val filters = rememberRestaurantFilterState()
     val listState = rememberLazyListState()
     LaunchedEffect(requestedMichelin) {
@@ -58,7 +62,10 @@ fun JournalScreen(
         cuisineFilters(restaurants.filter(Restaurant::isVisited))
     }
 
-    val filteredRestaurants = remember(restaurants, query, filters.michelin, filters.cuisineKey, filters.categories) {
+    val filteredRestaurants = remember(
+        restaurants, query, filters.michelin, filters.cuisineKey, filters.categories,
+        filters.minimumRating, filters.priceRange,
+    ) {
         restaurants
             .asSequence()
             .filter(Restaurant::isVisited)
@@ -73,6 +80,17 @@ fun JournalScreen(
             .toList()
     }
 
+    if (showFilters) {
+        RestaurantFilterSheet(
+            state = filters,
+            cuisines = cuisineFilters,
+            resultCount = filteredRestaurants.size,
+            confirmLabel = "Voir le journal",
+            onDismiss = { showFilters = false },
+            onReset = { filters.reset() },
+        )
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         state = listState,
@@ -85,7 +103,17 @@ fun JournalScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text("Journal", style = MaterialTheme.typography.displaySmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Journal", style = MaterialTheme.typography.displaySmall)
+                RestaurantFiltersButton(filters.activeCount) {
+                    focusManager.clearFocus()
+                    showFilters = true
+                }
+            }
         }
         item {
             OutlinedTextField(
@@ -98,13 +126,6 @@ fun JournalScreen(
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             )
         }
-        item {
-            RestaurantFilters(
-                state = filters,
-                cuisines = cuisineFilters,
-            )
-        }
-
         if (filteredRestaurants.isEmpty()) {
             item {
                 EmptyState(

@@ -21,14 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.MyLocation
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -56,7 +52,8 @@ import fr.martinrocca.resto.domain.model.cuisineFilters
 import fr.martinrocca.resto.navigation.AddButtonOverhang
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.GeoapifySearchField
-import fr.martinrocca.resto.ui.components.RestaurantFilters
+import fr.martinrocca.resto.ui.components.RestaurantFilterSheet
+import fr.martinrocca.resto.ui.components.RestaurantFiltersButton
 import fr.martinrocca.resto.ui.components.rememberRestaurantFilterState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -69,7 +66,6 @@ private enum class MapFilter(val label: String) {
 }
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
 fun MapScreen(
     restaurants: List<Restaurant>,
     viewModel: RestoViewModel,
@@ -153,12 +149,14 @@ fun MapScreen(
     }
 
     if (showFilters) {
-        ModalBottomSheet(onDismissRequest = { showFilters = false }) {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text("Filtrer les adresses", style = MaterialTheme.typography.titleLarge)
+        RestaurantFilterSheet(
+            state = filters,
+            cuisines = cuisines,
+            resultCount = mappedRestaurants.size,
+            confirmLabel = "Voir la carte",
+            onDismiss = { showFilters = false },
+            onReset = { filters.reset(); filterName = MapFilter.ALL.name },
+            scopeFilters = {
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -171,21 +169,8 @@ fun MapScreen(
                         )
                     }
                 }
-                RestaurantFilters(
-                    state = filters, cuisines = cuisines, showRating = true, showPrice = true,
-                )
-                if (filters.minimumRating != null) {
-                    Text("La note est celle de la dernière visite. Les adresses sans note sont masquées.", style = MaterialTheme.typography.bodySmall)
-                }
-                Text("${mappedRestaurants.size} adresses affichées")
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TextButton(onClick = { filters.reset(); filterName = MapFilter.ALL.name }) {
-                        Text("Réinitialiser")
-                    }
-                    OutlinedButton(onClick = { showFilters = false }) { Text("Voir la carte") }
-                }
-            }
-        }
+            },
+        )
     }
 
     BoxWithConstraints(
@@ -234,10 +219,7 @@ fun MapScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("Carte", style = MaterialTheme.typography.headlineMedium)
-                    OutlinedButton(onClick = { showFilters = true }) {
-                        Icon(Icons.Outlined.FilterList, null)
-                        Text(if (activeFilters == 0) "Filtres" else "Filtres ($activeFilters)", Modifier.padding(start = 6.dp))
-                    }
+                    RestaurantFiltersButton(activeFilters) { showFilters = true }
                 }
                 GeoapifySearchField(
                     query = addressQuery,

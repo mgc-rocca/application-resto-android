@@ -1,5 +1,16 @@
 # Historique des versions
 
+## 0.6.0
+
+- filtres du Journal regroupés dans le même bouton et panneau que la carte, avec prix et note minimale ;
+- prix compact en bas à droite des cartes du Journal, séparé des tags défilants, hauteur uniforme conservée ;
+- nom du restaurant affiché uniquement dans le bandeau supérieur de sa fiche ;
+- moyenne de toutes les visites arrondie à une décimale pour la fiche, les listes, les filtres de notes et les couleurs des pins ;
+- partage sans nom répété lorsqu’il est déjà en tête d’adresse, ligne vide avant les tags cuisine/prix ;
+- lien Google Maps d’itinéraire construit avec les coordonnées, ou avec l’adresse lorsqu’elles manquent, toujours sans note ni commentaires personnels ;
+- nouvelle icône adaptative utilisant l’image boussole-fourchette fournie ;
+- aucun changement de schéma Room ni de format de sauvegarde.
+
 ## 0.5.0
 
 - cartes du Journal de même hauteur : nom sur la première ligne, cuisines, catégories, prix et Michelin sur une seconde ligne défilante ;

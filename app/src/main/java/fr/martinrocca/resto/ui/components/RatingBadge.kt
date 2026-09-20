@@ -14,13 +14,30 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.theme.RatingPalette
 import fr.martinrocca.resto.theme.WarmGray
+import java.util.Locale
+
+@Composable
+fun RestaurantRatingBadge(restaurant: Restaurant, modifier: Modifier = Modifier) {
+    val average = restaurant.averageRating
+    RatingBadge(
+        rating = restaurant.ratingLevel,
+        modifier = modifier,
+        label = when {
+            average == null -> "–"
+            restaurant.visits.size > 1 -> String.format(Locale.FRANCE, "%.1f", average)
+            else -> average.toInt().toString()
+        },
+    )
+}
 
 @Composable
 fun RatingBadge(
     rating: Int?,
     modifier: Modifier = Modifier,
+    label: String = rating?.toString() ?: "–",
 ) {
     val color = ratingColor(rating)
     Box(
@@ -30,7 +47,7 @@ fun RatingBadge(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = rating?.toString() ?: "–",
+            text = label,
             color = ratingContentColor(rating, MaterialTheme.colorScheme.surface),
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
