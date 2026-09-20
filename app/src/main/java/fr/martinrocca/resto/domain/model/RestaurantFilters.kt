@@ -20,7 +20,7 @@ fun Restaurant.matchesFilters(
     (michelin == null || michelinStatus == michelin) &&
         (cuisineKey == null || cuisineTags.any { tagEquivalenceKey(it.name) == cuisineKey }) &&
         this.categories.containsAll(categories) &&
-        (minimumRating == null || latestVisit?.overallRating?.let { it >= minimumRating } == true) &&
+        (minimumRating == null || averageRating?.let { it >= minimumRating } == true) &&
         (priceRange == null || this.priceRange == priceRange)
 
 fun michelinVisitCounts(restaurants: List<Restaurant>): Map<MichelinStatus, Int> =

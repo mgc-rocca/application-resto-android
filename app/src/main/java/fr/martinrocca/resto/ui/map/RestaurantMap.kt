@@ -245,7 +245,7 @@ private fun List<Restaurant>.toFeatureCollection(): FeatureCollection = FeatureC
             addStringProperty(RESTAURANT_ID_PROPERTY, restaurant.id)
             addStringProperty(
                 ICON_ID_PROPERTY,
-                restaurant.latestVisit?.overallRating?.let(::markerIconId) ?: WISHLIST_ICON_ID,
+                restaurant.ratingLevel?.let(::markerIconId) ?: WISHLIST_ICON_ID,
             )
         }
     },

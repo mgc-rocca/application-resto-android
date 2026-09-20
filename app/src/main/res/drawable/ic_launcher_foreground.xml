@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keep the supplied artwork intact. Its original margins plus this inset put
+     the compass inside Android's 66 dp safe zone on the 108 dp adaptive layer. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetLeft="9%"
+    android:insetTop="9%"
+    android:insetRight="9%"
+    android:insetBottom="9%">
+    <bitmap
+        android:src="@drawable/ic_launcher_artwork"
+        android:gravity="fill"
+        android:filter="true" />
+</inset>

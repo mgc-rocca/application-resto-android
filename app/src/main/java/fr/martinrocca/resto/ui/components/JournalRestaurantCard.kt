@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -49,7 +51,7 @@ fun JournalRestaurantCard(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RatingBadge(restaurant.latestVisit?.overallRating)
+            RestaurantRatingBadge(restaurant)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     restaurant.name,
@@ -59,16 +61,35 @@ fun JournalRestaurantCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(tagHeight).horizontalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth().height(tagHeight),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (restaurant.michelinStatus != MichelinStatus.ABSENT) MichelinBadge(restaurant.michelinStatus)
-                    restaurant.cuisineTags.forEach { RestaurantTagBadge(it.name) }
-                    RestaurantCategory.entries.filter { it in restaurant.categories }.forEach {
-                        RestaurantTagBadge(it.label)
+                    Row(
+                        modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (restaurant.michelinStatus != MichelinStatus.ABSENT) MichelinBadge(restaurant.michelinStatus)
+                        restaurant.cuisineTags.forEach { RestaurantTagBadge(it.name) }
+                        RestaurantCategory.entries.filter { it in restaurant.categories }.forEach {
+                            RestaurantTagBadge(it.label)
+                        }
                     }
-                    restaurant.priceRange?.let { RestaurantTagBadge(it.label) }
+                    restaurant.priceRange?.let { range ->
+                        Surface(
+                            modifier = Modifier.align(Alignment.Bottom),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(6.dp),
+                        ) {
+                            Text(
+                                range.label,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                            )
+                        }
+                    }
                 }
             }
         }

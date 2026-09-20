@@ -3,6 +3,7 @@ package fr.martinrocca.resto.domain.model
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -58,15 +59,35 @@ class RestaurantFeaturesTest {
     }
 
     @Test
-    fun `rating filters use the latest visit and exclude unrated wishes only when active`() {
+    fun `rating filters use the average and exclude unrated wishes only when active`() {
         val restaurant = restaurant(MichelinStatus.ABSENT)
         val latest = restaurant.visits.single().copy(id = "new", date = LocalDate.of(2026, 9, 20), overallRating = 3)
         val revisited = restaurant.copy(visits = listOf(latest) + restaurant.visits)
+        assertEquals(5.5, revisited.averageRating!!, 0.0)
         assertFalse(revisited.matchesFilters(null, null, minimumRating = 8))
-        assertTrue(revisited.matchesFilters(null, null, minimumRating = 3))
+        assertTrue(revisited.matchesFilters(null, null, minimumRating = 5))
+        assertFalse(revisited.matchesFilters(null, null, minimumRating = 6))
         val wish = restaurant.copy(visits = emptyList())
+        assertNull(wish.averageRating)
+        assertNull(wish.ratingLevel)
         assertTrue(wish.matchesFilters(null, null))
         assertFalse(wish.matchesFilters(null, null, minimumRating = 1))
+    }
+
+    @Test
+    fun `restaurant scores round to one decimal and recalculate when visits change`() {
+        val restaurant = restaurant(MichelinStatus.ABSENT)
+        val visit = restaurant.visits.single()
+        val revisited = restaurant.copy(visits = listOf(
+            visit, visit.copy(id = "v2"), visit.copy(id = "v3"), visit.copy(id = "v4", overallRating = 9),
+        ))
+        assertEquals(8.0, restaurant.averageRating!!, 0.0)
+        assertEquals(8.3, revisited.averageRating!!, 0.0)
+        assertEquals(8, revisited.ratingLevel)
+        val corrected = revisited.copy(visits = revisited.visits.dropLast(1) + visit.copy(id = "v4", overallRating = 10))
+        assertEquals(8.5, corrected.averageRating!!, 0.0)
+        assertEquals(9, corrected.ratingLevel)
+        assertEquals(8.0, corrected.copy(visits = corrected.visits.dropLast(1)).averageRating!!, 0.0)
     }
 
     @Test
@@ -102,18 +123,51 @@ class RestaurantFeaturesTest {
         assertTrue(text.contains("2 étoiles Michelin"))
         assertFalse(text.contains("Ma note"))
         assertFalse(text.contains("8/10"))
-        assertTrue(text.contains("?mlat=48.85&mlon=2.35"))
+        assertTrue(text.endsWith("https://www.google.com/maps/dir/?api=1&destination=48.85%2C2.35"))
+        assertTrue(text.contains("1 rue du Test, Paris\n\nCuisine :"))
+        assertFalse(text.contains("openstreetmap"))
         assertFalse(text.contains("Commentaire privé"))
         assertFalse(text.contains("Envie privée"))
     }
 
     @Test
-    fun `sharing an unvisited manual address encodes the search and omits rating`() {
+    fun `sharing a manual address uses an encoded directions destination and omits rating`() {
         val text = restaurant(MichelinStatus.ABSENT)
             .copy(latitude = null, longitude = null, visits = emptyList()).shareText()
-        assertTrue(text.contains("Caf%C3%A9+%26+Table"))
+        assertTrue(text.endsWith("https://www.google.com/maps/dir/?api=1&destination=Caf%C3%A9+%26+Table+1+rue+du+Test%2C+Paris"))
         assertFalse(text.contains("Ma note"))
         assertFalse(text.contains("Michelin"))
+    }
+
+    @Test
+    fun `sharing removes a repeated name before a multiline or Geoapify address`() {
+        val restaurant = restaurant(MichelinStatus.ABSENT).copy(tags = listOf(Tag("p", "<15€")))
+        listOf(
+            "Café & Table\n1 rue du Test, Paris",
+            "Café & Table, 1 rue du Test, Paris",
+            "CAFÉ\u00a0 &   TABLE\r\n1 rue du Test, Paris",
+        ).forEach { address ->
+            val text = restaurant.copy(address = address).shareText()
+            assertTrue(text.startsWith("$address\n\nPrix : <15€\n\nhttps://www.google.com/maps/dir/"))
+        }
+    }
+
+    @Test
+    fun `sharing keeps distinct names and separates cuisine and price from the address`() {
+        val text = restaurant(MichelinStatus.ABSENT).copy(
+            address = "Café & Tableau, 1 rue du Test, Paris",
+            tags = listOf(Tag("c", "Français"), Tag("p", "40€-80€")),
+        ).shareText()
+        assertTrue(text.startsWith("Café & Table\nCafé & Tableau, 1 rue du Test, Paris\n\nCuisine : Français\nPrix : 40€-80€\n\n"))
+    }
+
+    @Test
+    fun `sharing without tags keeps one blank line before directions and preserves zero or negative coordinates`() {
+        val restaurant = restaurant(MichelinStatus.ABSENT).copy(tags = emptyList())
+        assertTrue(restaurant.copy(latitude = 0.0, longitude = -1.25).shareText().endsWith(
+            "1 rue du Test, Paris\n\nhttps://www.google.com/maps/dir/?api=1&destination=0.0%2C-1.25",
+        ))
+        assertTrue(restaurant.copy(latitude = null).shareText().contains("destination=Caf%C3%A9+%26+Table"))
     }
 
     private fun restaurant(status: MichelinStatus) = Restaurant(

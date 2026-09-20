@@ -47,7 +47,7 @@ fun RestaurantCard(
             verticalAlignment = Alignment.Top,
         ) {
             if (restaurant.isVisited) {
-                RatingBadge(rating = latestVisit?.overallRating)
+                RestaurantRatingBadge(restaurant)
                 Spacer(Modifier.width(14.dp))
             }
             Column(

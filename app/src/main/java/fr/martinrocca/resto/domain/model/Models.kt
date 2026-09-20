@@ -1,6 +1,7 @@
 package fr.martinrocca.resto.domain.model
 
 import java.time.LocalDate
+import kotlin.math.roundToInt
 
 data class Restaurant(
     val id: String,
@@ -24,6 +25,15 @@ data class Restaurant(
 
     val isVisited: Boolean
         get() = visits.isNotEmpty()
+
+    /** The restaurant score, recalculated from every visit and rounded to one decimal. */
+    val averageRating: Double?
+        get() = if (visits.isEmpty()) null else
+            (visits.map { it.overallRating }.average() * 10).roundToInt() / 10.0
+
+    /** Keep the ten validated palette levels, using the nearest integer to the displayed score. */
+    val ratingLevel: Int?
+        get() = averageRating?.roundToInt()?.coerceIn(1, 10)
 }
 
 data class Tag(

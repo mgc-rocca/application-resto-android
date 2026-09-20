@@ -45,6 +45,7 @@ import fr.martinrocca.resto.domain.model.shareText
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.BackHeader
 import fr.martinrocca.resto.ui.components.RatingBadge
+import fr.martinrocca.resto.ui.components.RestaurantRatingBadge
 import fr.martinrocca.resto.ui.components.LocalPhoto
 import fr.martinrocca.resto.ui.components.RestaurantDistinctions
 import fr.martinrocca.resto.ui.components.toFrenchDate
@@ -110,7 +111,20 @@ fun RestaurantScreen(
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(restaurant.name, style = MaterialTheme.typography.headlineLarge)
+                    if (restaurant.isVisited) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RestaurantRatingBadge(restaurant)
+                            Text(
+                                text = if (restaurant.visits.size > 1) {
+                                    "Note moyenne · ${restaurant.visits.size} visites"
+                                } else "1 visite",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        }
+                    }
                     if (restaurant.cuisineTags.isNotEmpty()) {
                         Text(
                             text = restaurant.cuisineTags.joinToString(" · ") { it.name },
