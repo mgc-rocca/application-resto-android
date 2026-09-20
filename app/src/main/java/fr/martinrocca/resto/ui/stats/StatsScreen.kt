@@ -50,6 +50,7 @@ import fr.martinrocca.resto.ui.RestoViewModel
 import java.text.DecimalFormat
 import java.time.LocalDate
 import kotlinx.coroutines.launch
+import fr.martinrocca.resto.theme.restoOutlinedButtonColors
 
 @Composable
 fun StatsScreen(
@@ -197,6 +198,7 @@ fun StatsScreen(
                 onClick = {
                     exportLauncher.launch("resto-sauvegarde-${LocalDate.now()}.zip")
                 },
+                colors = restoOutlinedButtonColors(),
                 enabled = !isWorking,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -218,6 +220,7 @@ fun StatsScreen(
                         arrayOf("application/zip", "application/octet-stream", "application/x-zip-compressed"),
                     )
                 },
+                colors = restoOutlinedButtonColors(),
                 enabled = !isWorking,
                 modifier = Modifier.fillMaxWidth(),
             ) {

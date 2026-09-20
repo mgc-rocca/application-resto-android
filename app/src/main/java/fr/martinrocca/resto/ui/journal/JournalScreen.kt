@@ -35,6 +35,7 @@ import fr.martinrocca.resto.ui.components.JournalRestaurantCard
 import fr.martinrocca.resto.ui.components.RestaurantFilterSheet
 import fr.martinrocca.resto.ui.components.RestaurantFiltersButton
 import fr.martinrocca.resto.ui.components.rememberRestaurantFilterState
+import fr.martinrocca.resto.theme.restoTextFieldColors
 
 @Composable
 fun JournalScreen(
@@ -117,6 +118,7 @@ fun JournalScreen(
         }
         item {
             OutlinedTextField(
+                colors = restoTextFieldColors(),
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),

@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.theme.RatingPalette
-import fr.martinrocca.resto.theme.WarmGray
+import fr.martinrocca.resto.theme.DisabledElement
 import java.util.Locale
 
 @Composable
@@ -55,7 +55,7 @@ fun RatingBadge(
     }
 }
 
-fun ratingColor(rating: Int?): Color = RatingPalette.getOrNull((rating ?: 0) - 1) ?: WarmGray
+fun ratingColor(rating: Int?): Color = RatingPalette.getOrNull((rating ?: 0) - 1) ?: DisabledElement
 
 internal fun ratingContentColor(rating: Int?, background: Color): Color {
     val luminance = ratingColor(rating).compositeOver(background).luminance()

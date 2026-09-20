@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.0.0
+
+- ouverture sur Carte avec l’onglet correspondant sélectionné ;
+- filtre Note ≥5 actif au premier affichage de la carte, visible dans le bouton et sous la recherche, modifiable et supprimable sans réactivation pendant la navigation ;
+- identité sauge & encre appliquée aux écrans existants, champs sur fond blanc, boutons, navigation, contours et états désactivés harmonisés ;
+- mode sombre système conservé avec les mêmes teintes adaptées au contraste ;
+- pins restaurants et envies tous en `#31473A` à pleine opacité, formes et détails intérieurs conservés, sans dépendance à la note ;
+- couleurs Michelin inchangées, palette des notes conservée hors carte ;
+- fond cartographique, icône V0.6, stockage local, sauvegardes et fonctionnalités métier inchangés.
+
 ## 0.6.0
 
 - filtres du Journal regroupés dans le même bouton et panneau que la carte, avec prix et note minimale ;

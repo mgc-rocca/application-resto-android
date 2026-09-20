@@ -2,7 +2,7 @@ package fr.martinrocca.resto.theme
 
 import androidx.compose.ui.graphics.Color
 
-/** Exact V0.5 palette, shared by map markers, rating badges and the rating slider. */
+/** The validated rating palette remains specific to badges and the slider, never map pins. */
 internal val RatingPalette = listOf(
     Color(0xFF4B0112).copy(alpha = 0.14f),
     Color(0xFF4B0112).copy(alpha = 0.21f),

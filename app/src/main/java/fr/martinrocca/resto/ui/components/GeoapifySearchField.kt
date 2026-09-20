@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import fr.martinrocca.resto.data.remote.geoapify.GeoapifySuggestion
 import kotlinx.coroutines.delay
+import fr.martinrocca.resto.theme.restoTextFieldColors
 
 @Composable
 fun GeoapifySearchField(
@@ -67,6 +68,7 @@ fun GeoapifySearchField(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         OutlinedTextField(
+            colors = restoTextFieldColors(),
             value = query,
             onValueChange = {
                 dismissedQuery = null

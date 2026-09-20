@@ -29,6 +29,7 @@ import fr.martinrocca.resto.ui.components.EmptyState
 import fr.martinrocca.resto.ui.components.RestaurantCard
 import fr.martinrocca.resto.ui.components.RestaurantFilters
 import fr.martinrocca.resto.ui.components.rememberRestaurantFilterState
+import fr.martinrocca.resto.theme.restoTextFieldColors
 
 @Composable
 fun WishlistScreen(
@@ -77,6 +78,7 @@ fun WishlistScreen(
         }
         item {
             OutlinedTextField(
+                colors = restoTextFieldColors(),
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
