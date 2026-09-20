@@ -101,7 +101,7 @@ fun RestoApp(
     ) { contentPadding ->
         NavHost(
             navController = navController,
-            startDestination = AppDestination.Journal.route,
+            startDestination = AppDestination.Map.route,
             modifier = Modifier.fillMaxSize(),
             enterTransition = { EnterTransition.None },
             exitTransition = { ExitTransition.None },

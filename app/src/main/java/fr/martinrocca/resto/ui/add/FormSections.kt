@@ -47,6 +47,9 @@ import fr.martinrocca.resto.ui.components.MichelinPicker
 import fr.martinrocca.resto.ui.components.RatingPicker
 import fr.martinrocca.resto.ui.components.toFrenchDate
 import java.time.LocalDate
+import fr.martinrocca.resto.theme.restoIconButtonColors
+import fr.martinrocca.resto.theme.restoOutlinedButtonColors
+import fr.martinrocca.resto.theme.restoTextFieldColors
 
 @Composable
 fun RestaurantFormFields(
@@ -68,6 +71,7 @@ fun RestaurantFormFields(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         OutlinedTextField(
+            colors = restoTextFieldColors(),
             value = name,
             onValueChange = onNameChange,
             modifier = Modifier.fillMaxWidth(),
@@ -75,6 +79,7 @@ fun RestaurantFormFields(
             singleLine = true,
         )
         OutlinedTextField(
+            colors = restoTextFieldColors(),
             value = address,
             onValueChange = onAddressChange,
             modifier = Modifier.fillMaxWidth(),
@@ -129,6 +134,7 @@ fun VisitFormFields(
             onSelected = onOverallRatingChange,
         )
         OutlinedTextField(
+            colors = restoTextFieldColors(),
             value = comment,
             onValueChange = onCommentChange,
             modifier = Modifier.fillMaxWidth(),
@@ -139,6 +145,7 @@ fun VisitFormFields(
             Text("Photos", style = MaterialTheme.typography.titleMedium)
             OutlinedButton(
                 onClick = onPickPhotos,
+                colors = restoOutlinedButtonColors(),
                 enabled = canPickPhotos,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -297,6 +304,7 @@ fun CuisineTagField(
             }
         }
         OutlinedTextField(
+            colors = restoTextFieldColors(),
             value = query,
             onValueChange = onQueryChange,
             modifier = Modifier.fillMaxWidth(),
@@ -305,7 +313,7 @@ fun CuisineTagField(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { addTags(query) }),
             trailingIcon = {
-                IconButton(onClick = { addTags(query) }, enabled = query.isNotBlank()) {
+                IconButton(onClick = { addTags(query) }, enabled = query.isNotBlank(), colors = restoIconButtonColors()) {
                     Icon(Icons.Outlined.Add, "Ajouter le tag")
                 }
             },

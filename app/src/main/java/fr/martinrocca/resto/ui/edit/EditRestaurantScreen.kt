@@ -31,6 +31,8 @@ import fr.martinrocca.resto.ui.add.buildRestaurantDraft
 import fr.martinrocca.resto.ui.components.BackHeader
 import fr.martinrocca.resto.ui.components.GeoapifySearchField
 import kotlinx.coroutines.launch
+import fr.martinrocca.resto.theme.restoButtonColors
+import fr.martinrocca.resto.theme.restoTextFieldColors
 
 @Composable
 fun EditRestaurantScreen(
@@ -120,6 +122,7 @@ fun EditRestaurantScreen(
             )
             if (restaurant.wishlist != null) {
                 OutlinedTextField(
+                    colors = restoTextFieldColors(),
                     value = wishlistNote,
                     onValueChange = { wishlistNote = it },
                     modifier = Modifier.fillMaxWidth(),
@@ -129,6 +132,7 @@ fun EditRestaurantScreen(
             }
             errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Button(
+                colors = restoButtonColors(),
                 enabled = !isSaving,
                 onClick = {
                     scope.launch {

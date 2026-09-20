@@ -31,6 +31,7 @@ import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.BackHeader
 import java.time.LocalDate
 import kotlinx.coroutines.launch
+import fr.martinrocca.resto.theme.restoButtonColors
 
 @Composable
 fun AddVisitScreen(
@@ -106,6 +107,7 @@ fun AddVisitScreen(
                 Text(text = it, color = MaterialTheme.colorScheme.error)
             }
             Button(
+                colors = restoButtonColors(),
                 enabled = !isSaving,
                 onClick = {
                     scope.launch {

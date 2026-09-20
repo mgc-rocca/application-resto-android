@@ -42,6 +42,8 @@ import fr.martinrocca.resto.ui.components.BackHeader
 import fr.martinrocca.resto.ui.components.GeoapifySearchField
 import java.time.LocalDate
 import kotlinx.coroutines.launch
+import fr.martinrocca.resto.theme.restoButtonColors
+import fr.martinrocca.resto.theme.restoTextFieldColors
 
 private enum class AddMode { WISHLIST, VISIT }
 
@@ -152,6 +154,7 @@ fun AddRestaurantScreen(
             when (mode) {
                 AddMode.WISHLIST -> {
                     OutlinedTextField(
+                        colors = restoTextFieldColors(),
                         value = wishlistNote,
                         onValueChange = { wishlistNote = it },
                         modifier = Modifier.fillMaxWidth(),
@@ -183,6 +186,7 @@ fun AddRestaurantScreen(
 
             if (mode != null) {
                 Button(
+                    colors = restoButtonColors(),
                     enabled = !isSaving,
                     onClick = {
                         scope.launch {

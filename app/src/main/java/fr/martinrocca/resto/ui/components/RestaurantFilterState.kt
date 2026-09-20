@@ -14,11 +14,11 @@ import fr.martinrocca.resto.domain.model.RestaurantCategory
 import fr.martinrocca.resto.domain.model.matchesFilters
 
 @Stable
-class RestaurantFilterState {
+class RestaurantFilterState(initialMinimumRating: Int? = null) {
     var michelin by mutableStateOf<MichelinStatus?>(null)
     var cuisineKey by mutableStateOf<String?>(null)
     var categories by mutableStateOf(emptySet<RestaurantCategory>())
-    var minimumRating by mutableStateOf<Int?>(null)
+    var minimumRating by mutableStateOf(initialMinimumRating)
     var priceRange by mutableStateOf<PriceRange?>(null)
 
     val activeCount: Int
@@ -65,5 +65,6 @@ class RestaurantFilterState {
 }
 
 @Composable
-fun rememberRestaurantFilterState(): RestaurantFilterState =
-    rememberSaveable(saver = RestaurantFilterState.Saver) { RestaurantFilterState() }
+fun rememberRestaurantFilterState(initialMinimumRating: Int? = null): RestaurantFilterState =
+    // Apply the default only to a new state; saved user choices (including null) take precedence.
+    rememberSaveable(saver = RestaurantFilterState.Saver) { RestaurantFilterState(initialMinimumRating) }

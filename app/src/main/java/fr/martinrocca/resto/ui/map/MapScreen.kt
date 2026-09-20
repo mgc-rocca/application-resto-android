@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.cuisineFilters
 import fr.martinrocca.resto.navigation.AddButtonOverhang
+import fr.martinrocca.resto.theme.restoFilledIconButtonColors
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.GeoapifySearchField
 import fr.martinrocca.resto.ui.components.RestaurantFilterSheet
@@ -75,7 +76,7 @@ fun MapScreen(
 ) {
     var addressQuery by rememberSaveable { mutableStateOf("") }
     var filterName by rememberSaveable { mutableStateOf(MapFilter.ALL.name) }
-    val filters = rememberRestaurantFilterState()
+    val filters = rememberRestaurantFilterState(initialMinimumRating = 5)
     var showFilters by rememberSaveable { mutableStateOf(false) }
     val cuisines = remember(restaurants) { cuisineFilters(restaurants) }
     val activeFilters = filters.activeCount + if (filterName == MapFilter.ALL.name) 0 else 1
@@ -234,7 +235,10 @@ fun MapScreen(
                     label = "Adresse",
                 )
                 Text(
-                    text = "${mappedRestaurants.size} adresses affichées",
+                    text = buildString {
+                        append("${mappedRestaurants.size} adresses affichées")
+                        filters.minimumRating?.let { append(" · Note ≥ $it/10") }
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -259,6 +263,7 @@ fun MapScreen(
             }
         }
         FilledIconButton(
+            colors = restoFilledIconButtonColors(),
             modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 24.dp, end = 16.dp).size(48.dp),
             enabled = !locating,
             onClick = {

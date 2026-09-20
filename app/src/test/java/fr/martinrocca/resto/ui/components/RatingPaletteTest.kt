@@ -1,9 +1,10 @@
 package fr.martinrocca.resto.ui.components
 
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
+import fr.martinrocca.resto.theme.LightColors
+import fr.martinrocca.resto.theme.DarkColors
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -26,8 +27,8 @@ class RatingPaletteTest {
     }
 
     @Test
-    fun `digits remain readable on both light and dark cards despite pin opacity`() {
-        listOf(Color(0xFFFFFDF8), Color(0xFF242724)).forEach { surface ->
+    fun `digits remain readable on both light and dark cards despite rating opacity`() {
+        listOf(LightColors.surface, DarkColors.surface).forEach { surface ->
             (1..10).forEach { rating ->
                 val background = ratingColor(rating).compositeOver(surface).luminance()
                 val foreground = ratingContentColor(rating, surface).luminance()

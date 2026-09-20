@@ -23,7 +23,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import fr.martinrocca.resto.domain.model.Restaurant
-import fr.martinrocca.resto.ui.components.ratingColor
+import fr.martinrocca.resto.theme.SagePrimary
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -204,19 +204,10 @@ private fun addMarkerAssets(style: Style, density: Float) {
             circleStrokeColor("#FFFFFF"), circleStrokeWidth(3f),
         ),
     )
-    (1..10).forEach { rating ->
-        style.addImage(
-            markerIconId(rating),
-            createMarkerBitmap(
-                color = ratingColor(rating).toArgb(),
-                density = density,
-            ),
-        )
-    }
+    style.addImage(RESTAURANT_ICON_ID, createMarkerBitmap(density = density))
     style.addImage(
         WISHLIST_ICON_ID,
         createMarkerBitmap(
-            color = ratingColor(null).toArgb(),
             density = density,
             isWishlist = true,
         ),
@@ -245,13 +236,11 @@ private fun List<Restaurant>.toFeatureCollection(): FeatureCollection = FeatureC
             addStringProperty(RESTAURANT_ID_PROPERTY, restaurant.id)
             addStringProperty(
                 ICON_ID_PROPERTY,
-                restaurant.ratingLevel?.let(::markerIconId) ?: WISHLIST_ICON_ID,
+                if (restaurant.isVisited) RESTAURANT_ICON_ID else WISHLIST_ICON_ID,
             )
         }
     },
 )
-
-private fun markerIconId(rating: Int): String = "resto-rating-$rating"
 
 private val PARIS_MAP_TARGET = MapTarget(48.8566, 2.3522, 11.5)
 
@@ -273,7 +262,6 @@ private fun CameraPosition.toMapTarget(): MapTarget? = target?.let { center ->
 }
 
 private fun createMarkerBitmap(
-    color: Int,
     density: Float,
     isWishlist: Boolean = false,
 ): Bitmap {
@@ -284,10 +272,9 @@ private fun createMarkerBitmap(
     val circleCenterY = circleRadius + 3 * density
     return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
         val canvas = Canvas(bitmap)
-        // Apply opacity once to the complete pin: overlapping circle/pointer must not darken the join.
-        val layer = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), Color.alpha(color))
         val markerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            this.color = Color.rgb(Color.red(color), Color.green(color), Color.blue(color))
+            // Every restaurant and wish uses the same fully opaque V1 color.
+            color = SagePrimary.toArgb()
         }
         val pointer = Path().apply {
             moveTo(centerX - circleRadius * 0.52f, circleCenterY + circleRadius * 0.62f)
@@ -309,7 +296,6 @@ private fun createMarkerBitmap(
         } else {
             canvas.drawCircle(centerX, circleCenterY, circleRadius * 0.2f, centerPaint)
         }
-        canvas.restoreToCount(layer)
     }
 }
 
@@ -318,4 +304,5 @@ private const val LOCATION_SOURCE_ID = "resto-device-location-source"
 private const val MARKER_LAYER_ID = "resto-restaurants-layer"
 private const val RESTAURANT_ID_PROPERTY = "restaurantId"
 private const val ICON_ID_PROPERTY = "iconId"
+private const val RESTAURANT_ICON_ID = "resto-restaurant"
 private const val WISHLIST_ICON_ID = "resto-wishlist"

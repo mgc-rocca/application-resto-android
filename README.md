@@ -4,6 +4,7 @@ Resto est un carnet gastronomique Android personnel, local et sans compte. Il pe
 
 ## Fonctionnalités
 
+- ouverture sur Carte, onglet sélectionné, avec le filtre Note ≥ 5 actif au premier affichage ;
 - Journal avec cartes de même hauteur sur deux lignes (nom, puis tags), prix compact en bas à droite, recherche dans les noms, adresses, tags et commentaires ;
 - même bouton et panneau de filtres dans le Journal et sur la carte : Michelin, qualité-prix, gastro, cuisines, note minimale et prix ;
 - filtres Michelin, catégories et cuisines dans les Envies ;
@@ -15,7 +16,8 @@ Resto est un carnet gastronomique Android personnel, local et sans compte. Il pe
 - tranche de prix facultative par restaurant : <15€, 15€ - 40€, 40€-80€, >80€ ;
 - jusqu’à 5 photos par visite, copiées dans le stockage privé de l’application ;
 - carte MapLibre avec fond OpenFreeMap, affichée sous un panneau transparent, centrée sur Paris au premier affichage ;
-- marqueurs sans note chiffrée, palette de dix couleurs et opacités partagée avec les notes du Journal et le slider ;
+- pins restaurants et envies uniformément vert sauge foncé `#31473A`, opaques, sans note chiffrée ;
+- palette des notes conservée uniquement dans les badges et le slider ;
 - panneau de filtres de la carte : visites/envies, cuisine, catégories, Michelin, prix et note minimale (≥5, ≥6, ≥7 ou ≥8) ;
 - localisation ponctuelle à la demande, via Android (sans dépendance aux services Google) ;
 - partage texte sans répétition du nom, avec adresse, tags et lien Google Maps d’itinéraire ;
@@ -25,6 +27,23 @@ Resto est un carnet gastronomique Android personnel, local et sans compte. Il pe
 - export et restauration d’une sauvegarde ZIP versionnée (JSON + photos).
 
 Toutes les données métier sont conservées dans une base Room locale. Aucune donnée du journal n’est envoyée à un serveur par l’application. Seules les recherches d’adresses sont transmises à Geoapify quand une clé est configurée, et les tuiles de la carte sont chargées depuis OpenFreeMap.
+
+## Identité visuelle V1
+
+| Usage en thème clair | Couleur |
+| --- | --- |
+| Boutons principaux, navigation sélectionnée, pins | `#31473A` |
+| Accents et sélections secondaires | `#789B84` |
+| Fond général | `#F4F2EC` |
+| Surfaces, cartes, champs et dialogues | `#FFFFFF` |
+| Contours et séparateurs | `#D8D9D3` |
+| Texte principal | `#202522` |
+| Texte secondaire et navigation non sélectionnée | `#6B716D` |
+| États désactivés et informations indisponibles | `#A8ADA9` |
+
+Les fonds de tags utilisent une teinte légère dérivée du vert secondaire. Le mode sombre système de la V0.6 est conservé : fond encre, surfaces légèrement éclaircies et accents sauge plus clairs pour garder des textes lisibles. Les pins restent exactement `#31473A` dans les deux thèmes. Les éléments Michelin conservent leur rouge `#CB0028`, leur blanc et leurs contours existants. Les couleurs fonctionnelles des notes hors carte, des erreurs et du point de localisation sont préservées ; le style OpenFreeMap Positron et l’icône de la V0.6 restent inchangés.
+
+Au démarrage à neuf, le filtre de note de la carte vaut 5. Le bouton indique un filtre actif et le texte sous la recherche précise « Note ≥ 5/10 ». Les envies non notées sont donc masquées jusqu’au retrait de ce filtre. La modification, la suppression et la réinitialisation fonctionnent comme auparavant ; le choix courant est conservé lors de la navigation, d’une rotation et d’une restauration d’état Android. Le Journal et les Envies ne reçoivent pas ce filtre par défaut.
 
 ## Configuration
 
@@ -108,7 +127,7 @@ Pour la version 0.5.0 :
 - vérifier « Commentaire » dans le formulaire Envie ;
 - ouvrir les filtres de la carte, combiner Visités/Envies, prix et note, faire pivoter l’écran et réinitialiser ;
 - vérifier sur téléphone que la carte descend derrière le bouton + jusqu’à la surface du menu, avec le logo MapLibre visible juste au-dessus de Journal ;
-- comparer les couleurs de plusieurs notes dans le Journal, sur les pins et sur le slider, en thème clair et sombre.
+- comparer les couleurs de plusieurs notes dans le Journal et sur le slider, en thème clair et sombre ; depuis la V1, tous les pins utilisent une couleur unique.
 
 Pour la version 0.6.0 :
 
@@ -120,6 +139,15 @@ Pour la version 0.6.0 :
 - partager une adresse dont le début contient déjà le nom, sur une ligne séparée ou avant une virgule : le nom n’est pas ajouté une seconde fois, une ligne vide sépare l’adresse des cuisines et du prix ;
 - ouvrir le lien partagé : destination GPS si disponible, sinon nom/adresse, sans imposer de moyen de transport ;
 - installer la mise à jour sur le Fairphone et vérifier la nouvelle icône boussole-fourchette dans le lanceur.
+
+Pour la version 1.0.0 :
+
+- démarrer à neuf : Carte est sélectionnée, le filtre ≥5 est visible et actif ; les restaurants sous 5 et les envies non notées sont masqués ;
+- retirer le filtre, aller dans Journal puis revenir, faire pivoter l’écran : le filtre ne doit pas se réactiver ; tester également ≥7, une cuisine et un prix, puis réinitialiser ;
+- comparer des restaurants notés 1, 5 et 10 après retrait du filtre : même pin vert opaque ; les envies gardent leur signe + intérieur avec la même couleur ;
+- vérifier les couleurs des boutons, champs, cartes, filtres, dialogues et onglets en thème clair puis sombre, ainsi que les états désactivés pendant un enregistrement ou une sauvegarde ;
+- vérifier les tags Michelin rouges et blancs, les notes du Journal et du slider, l’accès au Journal depuis Stats et le partage Google Maps ;
+- conserver les données et photos existantes après mise à jour : aucune migration Room n’est requise.
 
 La nouvelle icône utilise le PNG fourni, inchangé, avec un fond blanc et une marge adaptative pour les différents masques Android. Voir les [consignes officielles pour les icônes adaptatives](https://developer.android.com/develop/ui/compose/system/icon_design_adaptive).
 
@@ -147,8 +175,8 @@ Le ZIP n’est pas chiffré : il doit être conservé dans un emplacement privé
 - `domain/model` : modèle utilisé par l’interface ;
 - `ui` : écrans Jetpack Compose ;
 - `navigation` : routes et barre de navigation ;
-- `theme` : identité visuelle beige, anthracite et vert sauge.
+- `theme` : identité sauge & encre, avec couleurs fonctionnelles séparées pour les notes et Michelin.
 
-La base Room est la source de vérité. Un restaurant est considéré comme visité s’il possède au moins une visite. Sa note est la moyenne de toutes ses visites, arrondie à une décimale ; les badges et filtres utilisent cette même valeur. Les couleurs utilisent le niveau entier le plus proche dans la palette validée (7,5 → niveau 8). Les notes individuelles restent inchangées. Le Journal reste trié par date de dernière visite ; la statistique globale conserve sa moyenne de toutes les visites.
+La base Room est la source de vérité. Un restaurant est considéré comme visité s’il possède au moins une visite. Sa note est la moyenne de toutes ses visites, arrondie à une décimale ; les badges et filtres utilisent cette même valeur. Les couleurs des badges utilisent le niveau entier le plus proche dans la palette validée (7,5 → niveau 8) ; la note n’influence plus les pins. Les notes individuelles restent inchangées. Le Journal reste trié par date de dernière visite ; la statistique globale conserve sa moyenne de toutes les visites.
 
 La base est actuellement en version 1. Toute évolution de schéma doit fournir une migration Room, conserver le JSON exporté dans `app/schemas` et ajouter un test de migration ; aucune migration destructive ne doit être utilisée.

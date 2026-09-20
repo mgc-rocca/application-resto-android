@@ -38,6 +38,7 @@ import fr.martinrocca.resto.ui.add.buildVisitDraft
 import fr.martinrocca.resto.ui.components.BackHeader
 import fr.martinrocca.resto.ui.components.LocalPhoto
 import kotlinx.coroutines.launch
+import fr.martinrocca.resto.theme.restoButtonColors
 
 @Composable
 fun EditVisitScreen(
@@ -133,6 +134,7 @@ fun EditVisitScreen(
             )
             errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Button(
+                colors = restoButtonColors(),
                 enabled = !isSaving,
                 onClick = {
                     scope.launch {
