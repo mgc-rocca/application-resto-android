@@ -155,7 +155,7 @@ fun AddRestaurantScreen(
                         value = wishlistNote,
                         onValueChange = { wishlistNote = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Note personnelle · facultative") },
+                        label = { Text("Commentaire") },
                         minLines = 3,
                     )
                 }

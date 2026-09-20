@@ -15,24 +15,32 @@ import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.RestaurantCategory
 import fr.martinrocca.resto.domain.model.categories
+import fr.martinrocca.resto.domain.model.priceRange
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 fun RestaurantDistinctions(restaurant: Restaurant) {
-    if (restaurant.categories.isEmpty() && restaurant.michelinStatus == MichelinStatus.ABSENT) return
+    if (restaurant.categories.isEmpty() && restaurant.michelinStatus == MichelinStatus.ABSENT && restaurant.priceRange == null) return
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         RestaurantCategory.entries.filter { it in restaurant.categories }.forEach { category ->
-            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(8.dp)) {
-                Text(
-                    category.label,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
+            RestaurantTagBadge(category.label)
         }
+        restaurant.priceRange?.let { RestaurantTagBadge(it.label) }
         if (restaurant.michelinStatus != MichelinStatus.ABSENT) MichelinBadge(restaurant.michelinStatus)
+    }
+}
+
+@Composable
+fun RestaurantTagBadge(label: String) {
+    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(8.dp)) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+        )
     }
 }

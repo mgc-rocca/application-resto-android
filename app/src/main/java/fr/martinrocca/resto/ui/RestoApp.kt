@@ -164,7 +164,6 @@ fun RestoApp(
                 val restaurantId = entry.arguments?.getString("restaurantId")
                 val restaurant = restaurants.firstOrNull { it.id == restaurantId }
                 RestaurantScreen(
-                    knownTags = knownTags,
                     restaurant = restaurant,
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },

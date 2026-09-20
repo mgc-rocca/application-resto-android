@@ -14,7 +14,7 @@ fun restaurantCategory(name: String): RestaurantCategory? = when (
     else -> null
 }
 
-fun isCuisineTag(name: String): Boolean = restaurantCategory(name) == null
+fun isCuisineTag(name: String): Boolean = restaurantCategory(name) == null && priceRangeForTagName(name) == null
 
 val Restaurant.cuisineTags: List<Tag>
     get() = tags.filter { isCuisineTag(it.name) }

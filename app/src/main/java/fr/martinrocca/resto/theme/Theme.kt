@@ -22,7 +22,7 @@ private val LightColors = lightColorScheme(
     surfaceVariant = Color(0xFFEAE7E0),
     onSurfaceVariant = WarmGray,
     outline = OutlineWarm,
-    error = RatingLow,
+    error = ErrorRed,
 )
 
 private val DarkColors = darkColorScheme(

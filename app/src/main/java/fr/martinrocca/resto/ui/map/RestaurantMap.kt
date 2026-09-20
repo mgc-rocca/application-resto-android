@@ -284,7 +284,11 @@ private fun createMarkerBitmap(
     val circleCenterY = circleRadius + 3 * density
     return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
         val canvas = Canvas(bitmap)
-        val markerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+        // Apply opacity once to the complete pin: overlapping circle/pointer must not darken the join.
+        val layer = canvas.saveLayerAlpha(0f, 0f, width.toFloat(), height.toFloat(), Color.alpha(color))
+        val markerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = Color.rgb(Color.red(color), Color.green(color), Color.blue(color))
+        }
         val pointer = Path().apply {
             moveTo(centerX - circleRadius * 0.52f, circleCenterY + circleRadius * 0.62f)
             lineTo(centerX, height.toFloat())
@@ -305,6 +309,7 @@ private fun createMarkerBitmap(
         } else {
             canvas.drawCircle(centerX, circleCenterY, circleRadius * 0.2f, centerPaint)
         }
+        canvas.restoreToCount(layer)
     }
 }
 

@@ -21,6 +21,8 @@ import fr.martinrocca.resto.domain.model.VisitDraft
 import fr.martinrocca.resto.domain.model.WishlistEntry
 import fr.martinrocca.resto.domain.model.canonicalTagName
 import fr.martinrocca.resto.domain.model.normalizeTagName
+import fr.martinrocca.resto.domain.model.priceRangeForTagName
+import fr.martinrocca.resto.domain.model.withPriceRange
 import java.time.LocalDate
 import java.util.Locale
 import java.util.UUID
@@ -279,7 +281,7 @@ class RestaurantRepository(
         dao.deleteRestaurantTags(restaurantId)
         val knownTags = dao.getAllTags().toMutableList()
         val linkedTagIds = mutableSetOf<String>()
-        rawTags
+        withPriceRange(rawTags, rawTags.mapNotNull(::priceRangeForTagName).lastOrNull())
             .map(String::trim)
             .filter(String::isNotEmpty)
             .forEach { name ->

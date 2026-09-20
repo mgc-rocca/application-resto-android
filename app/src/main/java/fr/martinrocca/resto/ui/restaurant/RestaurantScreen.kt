@@ -54,7 +54,6 @@ import kotlinx.coroutines.launch
 fun RestaurantScreen(
     restaurant: Restaurant?,
     viewModel: RestoViewModel,
-    knownTags: List<String>,
     onBack: () -> Unit,
     onAddVisit: (String) -> Unit,
     onEditRestaurant: (String) -> Unit,
@@ -65,7 +64,6 @@ fun RestaurantScreen(
     var confirmRestaurantDeletion by rememberSaveable { mutableStateOf(false) }
     var visitToDelete by rememberSaveable { mutableStateOf<String?>(null) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
-    var editingTags by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -150,7 +148,6 @@ fun RestaurantScreen(
                             Icon(Icons.Outlined.Share, null)
                             Text("Partager", Modifier.padding(start = 8.dp))
                         }
-                        TextButton(onClick = { editingTags = true }) { Text("Modifier les tags") }
                     }
                 }
             }
@@ -217,15 +214,6 @@ fun RestaurantScreen(
                 item { Text(text = it, color = MaterialTheme.colorScheme.error) }
             }
         }
-    }
-
-    if (editingTags && restaurant != null) {
-        RestaurantTagsDialog(
-            restaurant = restaurant,
-            knownTags = knownTags,
-            onDismiss = { editingTags = false },
-            onSave = { viewModel.updateRestaurantTags(restaurant.id, it) },
-        )
     }
 
     if (confirmRestaurantDeletion && restaurant != null) {

@@ -8,6 +8,31 @@ import org.junit.Test
 
 class RestaurantFeaturesTest {
     @Test
+    fun `price filters combine with the other filters and prices are never cuisines`() {
+        val restaurant = restaurant(MichelinStatus.ONE_STAR).copy(
+            tags = listOf(Tag("t1", "Italien"), Tag("t2", "gastro"), Tag("t3", "15 € – 40 €")),
+        )
+        assertEquals(PriceRange.FROM_15_TO_40, restaurant.priceRange)
+        assertEquals(listOf("Italien"), cuisineFilters(listOf(restaurant)).map { it.label })
+        assertTrue(restaurant.matchesFilters(
+            MichelinStatus.ONE_STAR, tagEquivalenceKey("Italien"), setOf(RestaurantCategory.GASTRO),
+            minimumRating = 8, priceRange = PriceRange.FROM_15_TO_40,
+        ))
+        assertFalse(restaurant.matchesFilters(null, null, priceRange = PriceRange.OVER_80))
+        assertFalse(restaurant.matchesFilters(null, null, minimumRating = 9, priceRange = PriceRange.FROM_15_TO_40))
+        assertFalse(restaurant(MichelinStatus.ABSENT).matchesFilters(null, null, priceRange = PriceRange.UNDER_15))
+        assertTrue(restaurant.shareText().contains("Prix : 15€ - 40€"))
+    }
+
+    @Test
+    fun `replacing or clearing a price preserves all other tags`() {
+        val tags = listOf("Français", "gastro", "<15€", "qualité-prix")
+        val changed = withPriceRange(tags, PriceRange.OVER_80)
+        assertEquals(listOf("Français", "gastro", "qualité-prix", ">80€"), changed)
+        assertEquals(listOf("Français", "gastro", "qualité-prix"), withPriceRange(changed, null))
+    }
+
+    @Test
     fun `legacy quality price and gastro tags are categories and never cuisines`() {
         val restaurant = restaurant(MichelinStatus.ABSENT).copy(
             tags = listOf(Tag("t1", "Italien"), Tag("t2", "Qualité / prix"), Tag("t3", "GASTRO")),
@@ -69,13 +94,14 @@ class RestaurantFeaturesTest {
     }
 
     @Test
-    fun `sharing contains key facts and exact map position without private comments`() {
+    fun `sharing contains key facts and exact map position without personal ratings or comments`() {
         val text = restaurant(MichelinStatus.TWO_STARS).shareText()
         assertTrue(text.contains("Café & Table"))
         assertTrue(text.contains("1 rue du Test, Paris"))
         assertTrue(text.contains("Français · Italien"))
         assertTrue(text.contains("2 étoiles Michelin"))
-        assertTrue(text.contains("Ma note : 8/10"))
+        assertFalse(text.contains("Ma note"))
+        assertFalse(text.contains("8/10"))
         assertTrue(text.contains("?mlat=48.85&mlon=2.35"))
         assertFalse(text.contains("Commentaire privé"))
         assertFalse(text.contains("Envie privée"))

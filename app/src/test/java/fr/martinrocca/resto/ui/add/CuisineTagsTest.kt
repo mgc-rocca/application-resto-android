@@ -5,6 +5,14 @@ import org.junit.Test
 
 class CuisineTagsTest {
     @Test
+    fun `typed price changes keep only the most recent range while preserving cuisines and categories`() {
+        assertEquals(
+            listOf("Français", "gastro", "40€-80€"),
+            canonicalizeTags("Français, <15€, gastro, 15 € - 40 €, 40€-80€", emptyList()),
+        )
+    }
+
+    @Test
     fun `reserved categories keep their canonical names when editing old tags`() {
         val known = listOf("Qualité prix", "GASTRO", "Français")
         assertEquals(
