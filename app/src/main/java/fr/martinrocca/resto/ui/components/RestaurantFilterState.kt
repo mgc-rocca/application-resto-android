@@ -8,6 +8,7 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import fr.martinrocca.resto.domain.model.MichelinStatus
+import fr.martinrocca.resto.domain.model.PriceRange
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.RestaurantCategory
 import fr.martinrocca.resto.domain.model.matchesFilters
@@ -18,9 +19,10 @@ class RestaurantFilterState {
     var cuisineKey by mutableStateOf<String?>(null)
     var categories by mutableStateOf(emptySet<RestaurantCategory>())
     var minimumRating by mutableStateOf<Int?>(null)
+    var priceRange by mutableStateOf<PriceRange?>(null)
 
     val activeCount: Int
-        get() = listOfNotNull(michelin, cuisineKey, minimumRating).size + categories.size
+        get() = listOfNotNull(michelin, cuisineKey, minimumRating, priceRange).size + categories.size
 
     fun toggleCategory(category: RestaurantCategory) {
         categories = if (category in categories) categories - category else categories + category
@@ -31,10 +33,11 @@ class RestaurantFilterState {
         cuisineKey = null
         categories = emptySet()
         minimumRating = null
+        priceRange = null
     }
 
     fun matches(restaurant: Restaurant): Boolean = restaurant.matchesFilters(
-        michelin, cuisineKey, categories, minimumRating,
+        michelin, cuisineKey, categories, minimumRating, priceRange,
     )
 
     companion object {
@@ -44,6 +47,7 @@ class RestaurantFilterState {
                     it.michelin?.name.orEmpty(), it.cuisineKey.orEmpty(),
                     it.categories.joinToString(",") { category -> category.name },
                     it.minimumRating?.toString().orEmpty(),
+                    it.priceRange?.name.orEmpty(),
                 )
             },
             restore = { values ->
@@ -52,7 +56,8 @@ class RestaurantFilterState {
                     cuisineKey = values[1].takeIf(String::isNotEmpty)
                     categories = values[2].split(',').filter(String::isNotEmpty)
                         .map(RestaurantCategory::valueOf).toSet()
-                    minimumRating = values[3].toIntOrNull()
+                    minimumRating = values[3].toIntOrNull()?.takeIf { it in 5..8 }
+                    priceRange = values.getOrNull(4)?.takeIf(String::isNotEmpty)?.let(PriceRange::valueOf)
                 }
             },
         )

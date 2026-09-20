@@ -53,6 +53,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.cuisineFilters
+import fr.martinrocca.resto.navigation.AddButtonOverhang
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.GeoapifySearchField
 import fr.martinrocca.resto.ui.components.RestaurantFilters
@@ -140,7 +141,7 @@ fun MapScreen(
     }
     val isNetworkAvailable = rememberIsNetworkAvailable()
     val filter = MapFilter.valueOf(filterName)
-    val mappedRestaurants = remember(restaurants, filter, filters.michelin, filters.cuisineKey, filters.categories, filters.minimumRating) {
+    val mappedRestaurants = remember(restaurants, filter, filters.michelin, filters.cuisineKey, filters.categories, filters.minimumRating, filters.priceRange) {
         restaurants.filter { restaurant ->
             restaurant.latitude != null && restaurant.longitude != null &&
                 filters.matches(restaurant) && when (filter) {
@@ -158,8 +159,20 @@ fun MapScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text("Filtrer les adresses", style = MaterialTheme.typography.titleLarge)
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    MapFilter.entries.forEach { option ->
+                        FilterChip(
+                            selected = option == filter,
+                            onClick = { filterName = option.name },
+                            label = { Text(option.label) },
+                        )
+                    }
+                }
                 RestaurantFilters(
-                    state = filters, cuisines = cuisines, showRating = true,
+                    state = filters, cuisines = cuisines, showRating = true, showPrice = true,
                 )
                 if (filters.minimumRating != null) {
                     Text("La note est celle de la dernière visite. Les adresses sans note sont masquées.", style = MaterialTheme.typography.bodySmall)
@@ -178,7 +191,9 @@ fun MapScreen(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .padding(bottom = contentPadding.calculateBottomPadding()),
+            // The navigation bar reserves an empty strip for the raised + button.
+            // Render the map through that strip, stopping at the actual menu surface.
+            .padding(bottom = (contentPadding.calculateBottomPadding() - AddButtonOverhang).coerceAtLeast(0.dp)),
     ) {
         RestaurantMap(
             restaurants = mappedRestaurants,
@@ -236,18 +251,6 @@ fun MapScreen(
                     },
                     label = "Adresse",
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    MapFilter.entries.forEach { option ->
-                        FilterChip(
-                            selected = option == filter,
-                            onClick = { filterName = option.name },
-                            label = { Text(option.label) },
-                        )
-                    }
-                }
                 Text(
                     text = "${mappedRestaurants.size} adresses affichées",
                     style = MaterialTheme.typography.bodySmall,

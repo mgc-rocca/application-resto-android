@@ -10,6 +10,7 @@ fun normalizeTagName(value: String): String = Normalizer
     .replace("\\s+".toRegex(), " ")
 
 fun tagEquivalenceKey(value: String): String {
+    priceRangeForTagName(value)?.let { return normalizeTagName(it.label) }
     restaurantCategory(value)?.let { return normalizeTagName(it.label) }
     val normalized = normalizeTagName(value)
     return when {
@@ -28,6 +29,7 @@ fun canonicalTagName(
 ): String {
     val cleaned = value.trim().replace("\\s+".toRegex(), " ")
     if (cleaned.isEmpty()) return cleaned
+    priceRangeForTagName(cleaned)?.let { return it.label }
     restaurantCategory(cleaned)?.let { return it.label }
     val normalized = normalizeTagName(cleaned)
     val key = tagEquivalenceKey(cleaned)

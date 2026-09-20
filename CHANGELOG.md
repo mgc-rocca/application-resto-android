@@ -1,5 +1,18 @@
 # Historique des versions
 
+## 0.5.0
+
+- cartes du Journal de même hauteur : nom sur la première ligne, cuisines, catégories, prix et Michelin sur une seconde ligne défilante ;
+- suppression du bouton « Modifier les tags » : édition depuis le crayon de la fiche ;
+- partage sans note personnelle, avec la tranche de prix lorsqu’elle est renseignée ;
+- catégorie Prix facultative, à choix unique, disponible à l’ajout et à la modification ;
+- libellé « Commentaire » pour les envies ;
+- filtres Visités/Envies déplacés dans le panneau de filtres de la carte, nouveau filtre prix et seuls seuils ≥5, ≥6, ≥7, ≥8 ;
+- carte prolongée derrière le surplomb du bouton + jusqu’au menu, logo MapLibre conservé ;
+- palette exacte de dix notes, du bordeaux au bleu, avec opacités de 14 % à 100 %, partagée par les pins, les badges de note et le slider ;
+- chiffres des badges contrastés en thème clair et sombre ;
+- compatibilité des sauvegardes conservée, sans changement du schéma Room.
+
 ## 0.4.0
 
 - tags personnels « qualité-prix » et « gastro » séparés des cuisines, proposés entre cuisines et Guide Michelin ;

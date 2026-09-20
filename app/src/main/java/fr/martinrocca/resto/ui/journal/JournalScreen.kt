@@ -29,7 +29,7 @@ import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.cuisineFilters
 import fr.martinrocca.resto.ui.components.EmptyState
-import fr.martinrocca.resto.ui.components.RestaurantCard
+import fr.martinrocca.resto.ui.components.JournalRestaurantCard
 import fr.martinrocca.resto.ui.components.RestaurantFilters
 import fr.martinrocca.resto.ui.components.rememberRestaurantFilterState
 
@@ -125,11 +125,9 @@ fun JournalScreen(
                 items = filteredRestaurants,
                 key = Restaurant::id,
             ) { restaurant ->
-                RestaurantCard(
+                JournalRestaurantCard(
                     restaurant = restaurant,
                     onClick = { onRestaurantClick(restaurant.id) },
-                    showAddress = false,
-                    showLastVisit = false,
                 )
             }
         }

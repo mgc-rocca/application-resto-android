@@ -123,7 +123,7 @@ fun EditRestaurantScreen(
                     value = wishlistNote,
                     onValueChange = { wishlistNote = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Note dans les envies") },
+                    label = { Text("Commentaire") },
                     minLines = 3,
                 )
             }

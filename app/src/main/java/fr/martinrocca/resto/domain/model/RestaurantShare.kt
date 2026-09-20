@@ -8,7 +8,7 @@ fun Restaurant.shareText(): String = buildString {
     if (cuisineTags.isNotEmpty()) appendLine("Cuisine : ${cuisineTags.joinToString(" · ") { it.name }}")
     if (categories.isNotEmpty()) appendLine("Tags : ${categories.joinToString(" · ") { it.label }}")
     if (michelinStatus != MichelinStatus.ABSENT) appendLine(michelinStatus.label)
-    latestVisit?.let { appendLine("Ma note : ${it.overallRating}/10") }
+    priceRange?.let { appendLine("Prix : ${it.label}") }
     appendLine()
     if (latitude != null && longitude != null) {
         append("https://www.openstreetmap.org/?mlat=$latitude&mlon=$longitude#map=17/$latitude/$longitude")

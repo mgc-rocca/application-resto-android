@@ -10,15 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import fr.martinrocca.resto.domain.model.RatingBand
-import fr.martinrocca.resto.domain.model.ratingBand
-import fr.martinrocca.resto.theme.RatingExceptional
-import fr.martinrocca.resto.theme.RatingGood
-import fr.martinrocca.resto.theme.RatingLow
-import fr.martinrocca.resto.theme.RatingMedium
-import fr.martinrocca.resto.theme.RatingVeryGood
+import fr.martinrocca.resto.theme.RatingPalette
 import fr.martinrocca.resto.theme.WarmGray
 
 @Composable
@@ -35,18 +31,18 @@ fun RatingBadge(
     ) {
         Text(
             text = rating?.toString() ?: "–",
-            color = Color.White,
+            color = ratingContentColor(rating, MaterialTheme.colorScheme.surface),
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )
     }
 }
 
-fun ratingColor(rating: Int?): Color = when (ratingBand(rating)) {
-    RatingBand.VERY_LOW -> RatingLow
-    RatingBand.LOW -> RatingMedium
-    RatingBand.GOOD -> RatingGood
-    RatingBand.VERY_GOOD -> RatingVeryGood
-    RatingBand.EXCEPTIONAL -> RatingExceptional
-    RatingBand.WISHLIST -> WarmGray
+fun ratingColor(rating: Int?): Color = RatingPalette.getOrNull((rating ?: 0) - 1) ?: WarmGray
+
+internal fun ratingContentColor(rating: Int?, background: Color): Color {
+    val luminance = ratingColor(rating).compositeOver(background).luminance()
+    val whiteContrast = 1.05f / (luminance + 0.05f)
+    val blackContrast = (luminance + 0.05f) / 0.05f
+    return if (whiteContrast >= blackContrast) Color.White else Color.Black
 }

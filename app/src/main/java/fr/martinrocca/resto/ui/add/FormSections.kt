@@ -34,6 +34,9 @@ import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.domain.model.RestaurantDraft
 import fr.martinrocca.resto.domain.model.RestaurantCategory
+import fr.martinrocca.resto.domain.model.PriceRange
+import fr.martinrocca.resto.domain.model.priceRangeForTagName
+import fr.martinrocca.resto.domain.model.withPriceRange
 import fr.martinrocca.resto.domain.model.restaurantCategory
 import fr.martinrocca.resto.domain.model.isCuisineTag
 import fr.martinrocca.resto.domain.model.VisitDraft
@@ -84,6 +87,11 @@ fun RestaurantFormFields(
             knownTags = knownTags,
             query = tagQuery,
             onQueryChange = onTagQueryChange,
+        )
+        val tagNames = canonicalizeTags(tags, knownTags)
+        PricePicker(
+            selected = tagNames.firstNotNullOfOrNull(::priceRangeForTagName),
+            onSelected = { onTagsChange(withPriceRange(tagNames, it).joinToString(", ")) },
         )
         MichelinPicker(
             selected = michelinStatus,
@@ -203,7 +211,7 @@ fun RestaurantTagsField(
             value = names.filter(::isCuisineTag).joinToString(", "),
             onValueChange = { cuisines ->
                 onValueChange(canonicalizeTags(
-                    listOf(cuisines, categories.joinToString(",") { it.label }).joinToString(","),
+                    listOf(names.filterNot(::isCuisineTag).joinToString(","), cuisines).joinToString(","),
                     knownTags,
                 ).joinToString(", "))
             },
@@ -222,6 +230,25 @@ fun RestaurantTagsField(
                         onValueChange(updated.joinToString(", "))
                     },
                     label = { Text(category.label) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PricePicker(selected: PriceRange?, onSelected: (PriceRange?) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Prix", style = MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            PriceRange.entries.forEach { range ->
+                FilterChip(
+                    selected = selected == range,
+                    onClick = { onSelected(range.takeUnless { it == selected }) },
+                    label = { Text(range.label) },
                 )
             }
         }
@@ -342,6 +369,9 @@ fun canonicalizeTags(value: String, knownTags: List<String>): List<String> {
         .filter(String::isNotEmpty)
         .forEach { rawTag ->
             val canonical = canonicalTagName(rawTag, canonicalNames)
+            if (priceRangeForTagName(canonical) != null) {
+                result.removeAll { priceRangeForTagName(it) != null }
+            }
             if (result.none { tagEquivalenceKey(it) == tagEquivalenceKey(canonical) }) {
                 result += canonical
                 canonicalNames += canonical

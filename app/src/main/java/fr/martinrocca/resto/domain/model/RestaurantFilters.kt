@@ -15,11 +15,13 @@ fun Restaurant.matchesFilters(
     cuisineKey: String?,
     categories: Set<RestaurantCategory> = emptySet(),
     minimumRating: Int? = null,
+    priceRange: PriceRange? = null,
 ): Boolean =
     (michelin == null || michelinStatus == michelin) &&
         (cuisineKey == null || cuisineTags.any { tagEquivalenceKey(it.name) == cuisineKey }) &&
         this.categories.containsAll(categories) &&
-        (minimumRating == null || latestVisit?.overallRating?.let { it >= minimumRating } == true)
+        (minimumRating == null || latestVisit?.overallRating?.let { it >= minimumRating } == true) &&
+        (priceRange == null || this.priceRange == priceRange)
 
 fun michelinVisitCounts(restaurants: List<Restaurant>): Map<MichelinStatus, Int> =
     MichelinStatus.entries.filterNot { it == MichelinStatus.ABSENT }.associateWith { status ->

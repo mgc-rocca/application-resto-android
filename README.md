@@ -4,15 +4,17 @@ Resto est un carnet gastronomique Android personnel, local et sans compte. Il pe
 
 ## Fonctionnalités
 
-- Journal avec recherche dans les noms, adresses, tags et commentaires ;
+- Journal avec cartes de même hauteur sur deux lignes (nom, puis tous les tags), recherche dans les noms, adresses, tags et commentaires ;
 - filtres Michelin, qualité-prix, gastro et cuisines dans le Journal et les Envies ;
 - liste d’envies transformée automatiquement lors de la première visite ;
 - plusieurs visites par restaurant, avec une note unique de 1 à 10 choisie sur un slider ;
 - sélection de la date de visite dans un calendrier ;
 - réutilisation et normalisation des tags de cuisine déjà créés ;
+- tranche de prix facultative par restaurant : <15€, 15€ - 40€, 40€-80€, >80€ ;
 - jusqu’à 5 photos par visite, copiées dans le stockage privé de l’application ;
 - carte MapLibre avec fond OpenFreeMap, affichée sous un panneau transparent, centrée sur Paris au premier affichage ;
-- marqueurs terre cuite → sauge sans note chiffrée, filtres visites/envies, cuisine, catégories, Michelin et note minimale ;
+- marqueurs sans note chiffrée, palette de dix couleurs et opacités partagée avec les notes du Journal et le slider ;
+- panneau de filtres de la carte : visites/envies, cuisine, catégories, Michelin, prix et note minimale (≥5, ≥6, ≥7 ou ≥8) ;
 - localisation ponctuelle à la demande, via Android (sans dépendance aux services Google) ;
 - partage texte d’un restaurant vers WhatsApp ou toute application compatible ;
 - recherche et autocomplétion d’adresses avec Geoapify ;
@@ -81,7 +83,7 @@ Pour la version 0.3.0, vérifier aussi :
 - autoriser une position approximative ou précise, refuser l’autorisation et essayer avec la localisation désactivée ;
 - quitter la carte pendant une recherche de position : la demande doit s’arrêter ;
 - ajouter plusieurs tags successifs, retirer un tag, enregistrer et rouvrir la fiche ;
-- partager vers WhatsApp : nom, adresse, cuisines, distinction Michelin, dernière note personnelle et lien OpenStreetMap ;
+- partager vers WhatsApp : nom, adresse, cuisines, distinction Michelin et lien OpenStreetMap (sans note personnelle depuis la V0.5) ;
 - vérifier que les compteurs Michelin ne mélangent pas les catégories et ne comptent que les restaurants visités.
 
 Pour la version 0.4.0 :
@@ -92,12 +94,25 @@ Pour la version 0.4.0 :
 - choisir Envie puis J’y suis allé : seul le choix actif est coloré, le titre « La visite » n’apparaît pas dans ce formulaire ;
 - tester le slider à 1, 5 et 10, en glissant et en touchant directement la piste ;
 - ouvrir la carte sur Paris, rechercher une adresse, se localiser et faire pivoter l’écran : la caméra se conserve et les commandes restent accessibles ;
-- appliquer « ≥ 8/10 » : seules les adresses dont la dernière visite est notée au moins 8 apparaissent ; les envies non notées sont masquées jusqu’à réinitialisation ;
+- appliquer « ≥ 8 » : seules les adresses dont la dernière visite est notée au moins 8 apparaissent ; les envies non notées sont masquées jusqu’à réinitialisation ;
 - depuis Stats, toucher successivement Michelin et chaque nombre d’étoiles, avec une recherche et des filtres déjà actifs dans le Journal : la liste doit correspondre au compteur choisi.
+
+Pour la version 0.5.0 :
+
+- comparer les cartes du Journal sans tags, avec plusieurs tags et avec Michelin : hauteur identique, nom sur une ligne, tous les tags sur une seule ligne défilante ;
+- ajouter une tranche de prix, modifier les cuisines et les catégories, enregistrer et rouvrir : le prix reste présent ; choisir un autre prix remplace le précédent, toucher le prix sélectionné le retire ;
+- depuis le crayon de la fiche, modifier les tags et le prix ; le bouton « Modifier les tags » a disparu ;
+- partager un restaurant visité : le prix figure dans le texte, jamais la note ni les commentaires ;
+- vérifier « Commentaire » dans le formulaire Envie ;
+- ouvrir les filtres de la carte, combiner Visités/Envies, prix et note, faire pivoter l’écran et réinitialiser ;
+- vérifier sur téléphone que la carte descend derrière le bouton + jusqu’à la surface du menu, avec le logo MapLibre visible juste au-dessus de Journal ;
+- comparer les couleurs de plusieurs notes dans le Journal, sur les pins et sur le slider, en thème clair et sombre.
 
 « qualité-prix » et « gastro » sont des catégories personnelles cumulables, indépendantes du classement officiel Michelin. Elles restent enregistrées comme tags dans les sauvegardes existantes.
 
-La permission de localisation est demandée uniquement au toucher de « Me localiser ». L’application ne suit pas la position en arrière-plan et ne l’enregistre pas dans le journal. Le fond de carte utilise OpenFreeMap ; les requêtes saisies pour chercher une adresse sont envoyées à Geoapify. Les commentaires et photos ne sont pas inclus dans le partage texte.
+Le prix est un tag réservé, unique et facultatif, distinct des cuisines. Il suit les mêmes sauvegardes que les autres tags, sans migration Room. Les adresses sans prix sont masquées lorsqu’une tranche est sélectionnée dans les filtres.
+
+La permission de localisation est demandée uniquement au toucher de « Me localiser ». L’application ne suit pas la position en arrière-plan et ne l’enregistre pas dans le journal. Le fond de carte utilise OpenFreeMap ; les requêtes saisies pour chercher une adresse sont envoyées à Geoapify. Les notes personnelles, commentaires et photos ne sont pas inclus dans le partage texte.
 
 ## Sauvegardes
 

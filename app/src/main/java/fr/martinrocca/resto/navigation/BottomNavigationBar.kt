@@ -14,6 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+internal val AddButtonOverhang = 26.dp
+
 @Composable
 fun RestoBottomBar(
     currentRoute: String?,
@@ -22,7 +24,7 @@ fun RestoBottomBar(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
-        NavigationBar(modifier = Modifier.padding(top = 26.dp)) {
+        NavigationBar(modifier = Modifier.padding(top = AddButtonOverhang)) {
             AppDestination.topLevel.take(2).forEach { destination ->
                 DestinationItem(
                     destination = destination,
