@@ -14,8 +14,10 @@ val localProperties = Properties().apply {
     }
 }
 
-val geoapifyApiKey = localProperties
-    .getProperty("GEOAPIFY_API_KEY", "")
+val googleMapsApiKey = localProperties
+    .getProperty("GOOGLE_MAPS_API_KEY", "")
+val googlePlacesApiKey = localProperties
+    .getProperty("GOOGLE_PLACES_API_KEY", googleMapsApiKey)
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
 
@@ -27,12 +29,16 @@ android {
         applicationId = "fr.martinrocca.resto"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.0.0"
+        versionCode = 8
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "GEOAPIFY_API_KEY", "\"$geoapifyApiKey\"")
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = googleMapsApiKey
+        buildConfigField("String", "GOOGLE_PLACES_API_KEY", "\"$googlePlacesApiKey\"")
+
+        val publicDocumentsRef = localProperties.getProperty("RESTO_PUBLIC_DOCUMENTS_REF", "master")
+        buildConfigField("String", "PUBLIC_DOCUMENTS_BASE_URL", "\"https://github.com/mgc-rocca/application-resto-android/blob/$publicDocumentsRef/docs/\"")
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -51,6 +57,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -79,13 +86,20 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.maplibre.android)
+    implementation(libs.google.maps)
+    implementation(libs.google.places)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.androidx.appcompat)
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.room.testing)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
+
+android.sourceSets.getByName("androidTest").assets.srcDirs("$projectDir/schemas")
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")

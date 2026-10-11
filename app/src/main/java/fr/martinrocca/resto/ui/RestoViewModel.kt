@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import fr.martinrocca.resto.data.backup.BackupRepository
-import fr.martinrocca.resto.data.remote.geoapify.GeoapifyService
-import fr.martinrocca.resto.data.remote.geoapify.GeoapifySuggestion
+import fr.martinrocca.resto.data.remote.google.GooglePlacesService
+import fr.martinrocca.resto.data.remote.google.GoogleCoordinates
 import fr.martinrocca.resto.data.repository.RestaurantRepository
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.RestaurantDraft
@@ -21,9 +21,9 @@ import kotlinx.coroutines.flow.stateIn
 class RestoViewModel(
     private val repository: RestaurantRepository,
     private val backupRepository: BackupRepository,
-    private val geoapifyService: GeoapifyService,
+    val googlePlacesService: GooglePlacesService,
 ) : ViewModel() {
-    val isGeoapifyConfigured: Boolean = geoapifyService.isConfigured
+    val googleCoordinates = googlePlacesService.coordinates
 
     val restaurants: StateFlow<RestaurantsUiState> = repository
         .observeRestaurants()
@@ -89,8 +89,8 @@ class RestoViewModel(
         repository.deleteRestaurant(restaurantId)
     }
 
-    suspend fun searchPlaces(query: String): Result<List<GeoapifySuggestion>> = runSuspendCatching {
-        geoapifyService.autocomplete(query)
+    suspend fun locateGooglePlace(placeId: String): Result<GoogleCoordinates> = runSuspendCatching {
+        googlePlacesService.coordinatesFor(placeId)
     }
 
     suspend fun exportBackup(uri: Uri): Result<Unit> = runSuspendCatching {
@@ -99,17 +99,18 @@ class RestoViewModel(
 
     suspend fun restoreBackup(uri: Uri): Result<Unit> = runSuspendCatching {
         backupRepository.restoreFrom(uri)
+        googlePlacesService.clearCoordinates()
     }
 
     class Factory(
         private val repository: RestaurantRepository,
         private val backupRepository: BackupRepository,
-        private val geoapifyService: GeoapifyService,
+        val googlePlacesService: GooglePlacesService,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(RestoViewModel::class.java))
-            return RestoViewModel(repository, backupRepository, geoapifyService) as T
+            return RestoViewModel(repository, backupRepository, googlePlacesService) as T
         }
     }
 }

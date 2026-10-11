@@ -16,6 +16,8 @@ data class Restaurant(
     val wishlist: WishlistEntry?,
     val createdAt: Long,
     val updatedAt: Long,
+    val googlePlaceId: String? = null,
+    val coordinateSource: String = "LEGACY",
 ) {
     val latestVisit: Visit?
         get() = visits.maxWithOrNull(
@@ -85,6 +87,8 @@ data class RestaurantDraft(
     val geoapifyPlaceId: String? = null,
     val michelinStatus: MichelinStatus = MichelinStatus.ABSENT,
     val tags: List<String> = emptyList(),
+    val googlePlaceId: String? = null,
+    val coordinateSource: String = "USER",
 )
 
 data class VisitDraft(

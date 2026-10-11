@@ -5,8 +5,12 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import android.view.Gravity
-import android.view.View
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -18,248 +22,179 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.GoogleMapOptions
+import com.google.android.gms.maps.MapView
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapColorScheme
+import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.theme.SagePrimary
-import org.maplibre.android.camera.CameraPosition
-import org.maplibre.android.camera.CameraUpdateFactory
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.MapView
-import org.maplibre.android.maps.Style
-import org.maplibre.android.style.expressions.Expression.get
-import org.maplibre.android.style.layers.Property.ICON_ANCHOR_BOTTOM
-import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
-import org.maplibre.android.style.layers.PropertyFactory.iconAnchor
-import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
-import org.maplibre.android.style.layers.PropertyFactory.iconImage
-import org.maplibre.android.style.layers.SymbolLayer
-import org.maplibre.android.style.layers.CircleLayer
-import org.maplibre.android.style.layers.PropertyFactory.circleColor
-import org.maplibre.android.style.layers.PropertyFactory.circleRadius
-import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
-import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
-import org.maplibre.android.style.sources.GeoJsonSource
-import org.maplibre.geojson.Feature
-import org.maplibre.geojson.FeatureCollection
-import org.maplibre.geojson.Point
+import kotlinx.coroutines.delay
+
+/** Personal coordinates and process-only Google coordinates remain separate from Room models. */
+data class RestaurantMarker(val restaurant: Restaurant, val latitude: Double, val longitude: Double)
 
 @Composable
 fun RestaurantMap(
-    restaurants: List<Restaurant>,
-    initialCameraTarget: MapTarget?,
-    cameraTarget: MapTarget?,
-    cameraRequestId: Int,
-    deviceLocation: MapTarget?,
-    topContentInset: Int,
-    onCameraChanged: (MapTarget) -> Unit,
+    restaurants: List<RestaurantMarker>,
     onRestaurantClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    initialCameraTarget: MapTarget? = null,
+    cameraTarget: MapTarget? = null,
+    cameraRequestId: Int = 0,
+    deviceLocation: MapTarget? = null,
+    topContentInset: Int = 0,
+    servicesError: String? = null,
+    onCameraChanged: (MapTarget) -> Unit = {},
+    onMapError: (String?) -> Unit = {},
 ) {
+    if (servicesError != null) {
+        Column(modifier.padding(24.dp), verticalArrangement = Arrangement.Center) {
+            Text(servicesError, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        return
+    }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val mapView = remember { MapView(context) }
-    var map by remember { mutableStateOf<MapLibreMap?>(null) }
-    var markerStyle by remember { mutableStateOf<Style?>(null) }
-    val currentOnRestaurantClick by rememberUpdatedState(onRestaurantClick)
-    val currentOnCameraChanged by rememberUpdatedState(onCameraChanged)
-    val currentInitialCameraTarget by rememberUpdatedState(initialCameraTarget)
-
+    val click by rememberUpdatedState(onRestaurantClick)
+    val cameraChanged by rememberUpdatedState(onCameraChanged)
+    val reportError by rememberUpdatedState(onMapError)
+    val initialTarget = remember { cameraTarget ?: initialCameraTarget ?: PARIS_MAP_TARGET }
+    var map by remember { mutableStateOf<GoogleMap?>(null) }
+    var loaded by remember { mutableStateOf(false) }
+    val mapView = remember(context) {
+        runCatching {
+            MapView(context, GoogleMapOptions().mapType(GoogleMap.MAP_TYPE_NORMAL)
+                .mapColorScheme(MapColorScheme.LIGHT)).apply { onCreate(null) }
+        }.getOrNull()
+    }
+    if (mapView == null) {
+        LaunchedEffect(Unit) { reportError("La carte Google n’a pas pu démarrer. Le Journal reste disponible.") }
+        return
+    }
     DisposableEffect(mapView, lifecycle) {
         var started = false
         var resumed = false
-        var destroyed = false
-        mapView.onCreate(null)
-        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-            mapView.onStart()
-            started = true
+        fun sync() {
+            runCatching {
+                if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) && !started) {
+                    mapView.onStart(); started = true
+                }
+                if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && !resumed) {
+                    mapView.onResume(); resumed = true
+                }
+                if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && resumed) {
+                    mapView.onPause(); resumed = false
+                }
+                if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) && started) {
+                    mapView.onStop(); started = false
+                }
+            }.onFailure { reportError("Carte Google indisponible. Le Journal reste disponible.") }
         }
-        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            mapView.onResume()
-            resumed = true
-        }
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_START -> if (!started) {
-                    mapView.onStart()
-                    started = true
-                }
-                Lifecycle.Event.ON_RESUME -> if (!resumed) {
-                    mapView.onResume()
-                    resumed = true
-                }
-                Lifecycle.Event.ON_PAUSE -> if (resumed) {
-                    mapView.onPause()
-                    resumed = false
-                }
-                Lifecycle.Event.ON_STOP -> if (started) {
-                    mapView.onStop()
-                    started = false
-                }
-                Lifecycle.Event.ON_DESTROY -> if (!destroyed) {
-                    destroyed = true
-                    mapView.onDestroy()
-                }
-                else -> Unit
-            }
-        }
+        val observer = LifecycleEventObserver { _, _ -> sync() }
         lifecycle.addObserver(observer)
+        sync()
         onDispose {
-            mapView.visibility = View.INVISIBLE
             lifecycle.removeObserver(observer)
-            if (!destroyed) {
+            runCatching {
                 if (resumed) mapView.onPause()
                 if (started) mapView.onStop()
-                destroyed = true
                 mapView.onDestroy()
             }
         }
     }
+    AndroidView(factory = {
+        mapView.apply {
+            runCatching {
+                getMapAsync { googleMap ->
+                    runCatching {
+                        googleMap.setMapColorScheme(MapColorScheme.LIGHT)
+                        val json = context.assets.open("resto-map-style.json").bufferedReader().use { it.readText() }
+                        val styleApplied = googleMap.setMapStyle(MapStyleOptions(json))
+                        if (!styleApplied) {
+                            reportError("Le style de carte n’a pas pu être appliqué.")
+                        }
+                        googleMap.isBuildingsEnabled = true
+                        googleMap.isIndoorEnabled = false
+                        googleMap.uiSettings.isMapToolbarEnabled = false
+                        googleMap.uiSettings.isZoomControlsEnabled = false
+                        googleMap.uiSettings.isMyLocationButtonEnabled = false
+                        googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(initialTarget.toCameraPosition()))
+                        googleMap.setOnMarkerClickListener { marker ->
+                            (marker.tag as? String)?.let(click)
+                            true
+                        }
+                        googleMap.setOnCameraIdleListener { cameraChanged(googleMap.cameraPosition.toMapTarget()) }
+                        googleMap.setOnMapLoadedCallback {
+                            loaded = true
+                            reportError(if (styleApplied) null else "Le style de carte n’a pas pu être appliqué.")
+                        }
+                        map = googleMap
+                    }.onFailure { reportError("Carte Google indisponible. Vérifiez sa configuration ; le Journal reste disponible.") }
+                }
+            }.onFailure { reportError("Carte Google indisponible. Le Journal reste disponible.") }
+        }
+    }, modifier = modifier.fillMaxSize())
 
-    AndroidView(
-        factory = {
-            mapView.apply {
-                visibility = View.VISIBLE
-                getMapAsync { mapLibreMap ->
-                    map = mapLibreMap
-                    mapLibreMap.uiSettings.isCompassEnabled = true
-                    mapLibreMap.uiSettings.isAttributionEnabled = true
-                    mapLibreMap.uiSettings.compassGravity = Gravity.BOTTOM or Gravity.END
-                    val density = context.resources.displayMetrics.density
-                    mapLibreMap.uiSettings.setCompassMargins(0, 0, (24 * density).toInt(), (88 * density).toInt())
-                    val initialTarget = cameraTarget ?: currentInitialCameraTarget ?: PARIS_MAP_TARGET
-                    mapLibreMap.moveCamera(CameraUpdateFactory.newCameraPosition(initialTarget.toCameraPosition()))
-                    mapLibreMap.setStyle(
-                        Style.Builder().fromUri("asset://resto-map-style.json"),
-                    ) { style ->
-                        addMarkerAssets(style, context.resources.displayMetrics.density)
-                        markerStyle = style
-                    }
+    LaunchedEffect(mapView, loaded) {
+        if (!loaded) {
+            delay(15_000)
+            if (!loaded) reportError("Le fond Google Maps ne s’est pas chargé. Vérifiez le réseau et la clé Google, ou ouvrez le Journal.")
+        }
+    }
+    val restaurantMarkers = remember { mutableListOf<Marker>() }
+    LaunchedEffect(map, restaurants) {
+        val current = map ?: return@LaunchedEffect
+        runCatching {
+            restaurantMarkers.forEach(Marker::remove)
+            restaurantMarkers.clear()
+            val density = context.resources.displayMetrics.density
+            val visitedIcon = BitmapDescriptorFactory.fromBitmap(createMarkerBitmap(density))
+            val wishIcon = BitmapDescriptorFactory.fromBitmap(createMarkerBitmap(density, isWishlist = true))
+            restaurants.forEach { item ->
+                current.addMarker(MarkerOptions().position(LatLng(item.latitude, item.longitude))
+                    .icon(if (item.restaurant.isVisited) visitedIcon else wishIcon).anchor(0.5f, 1f))?.let { marker ->
+                    marker.tag = item.restaurant.id
+                    restaurantMarkers += marker
                 }
             }
-        },
-        modifier = modifier,
-    )
-
-    LaunchedEffect(markerStyle, restaurants) {
-        markerStyle
-            ?.getSourceAs<GeoJsonSource>(MARKER_SOURCE_ID)
-            ?.setGeoJson(restaurants.toFeatureCollection())
+        }.onFailure { reportError("Certains marqueurs n’ont pas pu être affichés. Vos fiches restent disponibles dans le Journal.") }
     }
-
+    var locationMarker by remember { mutableStateOf<Marker?>(null) }
+    LaunchedEffect(map, deviceLocation) {
+        val current = map ?: return@LaunchedEffect
+        runCatching {
+            locationMarker?.remove()
+            locationMarker = deviceLocation?.let {
+                current.addMarker(MarkerOptions().position(LatLng(it.latitude, it.longitude))
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)))
+            }
+        }
+    }
     LaunchedEffect(map, topContentInset) {
-        // Keep camera targets in the visible area while rendering the map behind the overlay.
-        map?.moveCamera(CameraUpdateFactory.paddingTo(0.0, topContentInset.toDouble(), 0.0, 0.0))
+        // Google's logo remains visible at the bottom; the overlay only reserves the top area.
+        runCatching { map?.setPadding(0, topContentInset, 0, 0) }
     }
-
-    DisposableEffect(map) {
-        val currentMap = map
-        if (currentMap == null) return@DisposableEffect onDispose {}
-        val clickListener = MapLibreMap.OnMapClickListener { point ->
-            val feature = currentMap.queryRenderedFeatures(
-                currentMap.projection.toScreenLocation(point),
-                MARKER_LAYER_ID,
-            ).firstOrNull()
-            feature?.getStringProperty(RESTAURANT_ID_PROPERTY)?.let(currentOnRestaurantClick)
-            feature != null
-        }
-        val cameraListener = MapLibreMap.OnCameraIdleListener {
-            currentMap.cameraPosition.toMapTarget()?.let(currentOnCameraChanged)
-        }
-        currentMap.addOnMapClickListener(clickListener)
-        currentMap.addOnCameraIdleListener(cameraListener)
-        onDispose {
-            currentMap.cameraPosition.toMapTarget()?.let(currentOnCameraChanged)
-            currentMap.removeOnMapClickListener(clickListener)
-            currentMap.removeOnCameraIdleListener(cameraListener)
-        }
-    }
-
-    LaunchedEffect(markerStyle, deviceLocation) {
-        val features = deviceLocation?.let {
-            listOf(Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude)))
-        }.orEmpty()
-        markerStyle?.getSourceAs<GeoJsonSource>(LOCATION_SOURCE_ID)
-            ?.setGeoJson(FeatureCollection.fromFeatures(features))
-    }
-
-    LaunchedEffect(map, markerStyle, cameraTarget, cameraRequestId) {
-        val target = cameraTarget ?: return@LaunchedEffect
-        if (markerStyle == null) return@LaunchedEffect
-        map?.animateCamera(
-            CameraUpdateFactory.newCameraPosition(target.toCameraPosition()),
-            700,
-        )
+    LaunchedEffect(map, cameraRequestId) {
+        cameraTarget?.let { target -> runCatching { map?.animateCamera(CameraUpdateFactory.newCameraPosition(target.toCameraPosition())) } }
     }
 }
-
-private fun addMarkerAssets(style: Style, density: Float) {
-    style.addSource(GeoJsonSource(LOCATION_SOURCE_ID, FeatureCollection.fromFeatures(emptyList<Feature>())))
-    style.addLayer(
-        CircleLayer("resto-device-location", LOCATION_SOURCE_ID).withProperties(
-            circleRadius(7f), circleColor("#3275AC"),
-            circleStrokeColor("#FFFFFF"), circleStrokeWidth(3f),
-        ),
-    )
-    style.addImage(RESTAURANT_ICON_ID, createMarkerBitmap(density = density))
-    style.addImage(
-        WISHLIST_ICON_ID,
-        createMarkerBitmap(
-            density = density,
-            isWishlist = true,
-        ),
-    )
-    style.addSource(
-        GeoJsonSource(
-            MARKER_SOURCE_ID,
-            FeatureCollection.fromFeatures(emptyList<Feature>()),
-        ),
-    )
-    style.addLayer(
-        SymbolLayer(MARKER_LAYER_ID, MARKER_SOURCE_ID).withProperties(
-            iconImage(get(ICON_ID_PROPERTY)),
-            iconAnchor(ICON_ANCHOR_BOTTOM),
-            iconAllowOverlap(true),
-            iconIgnorePlacement(true),
-        ),
-    )
-}
-
-private fun List<Restaurant>.toFeatureCollection(): FeatureCollection = FeatureCollection.fromFeatures(
-    mapNotNull { restaurant ->
-        val latitude = restaurant.latitude ?: return@mapNotNull null
-        val longitude = restaurant.longitude ?: return@mapNotNull null
-        Feature.fromGeometry(Point.fromLngLat(longitude, latitude)).apply {
-            addStringProperty(RESTAURANT_ID_PROPERTY, restaurant.id)
-            addStringProperty(
-                ICON_ID_PROPERTY,
-                if (restaurant.isVisited) RESTAURANT_ICON_ID else WISHLIST_ICON_ID,
-            )
-        }
-    },
-)
 
 private val PARIS_MAP_TARGET = MapTarget(48.8566, 2.3522, 11.5)
-
 private fun MapTarget.toCameraPosition(): CameraPosition = CameraPosition.Builder()
-    .target(LatLng(latitude, longitude))
-    .zoom(zoom)
-    .bearing(bearing)
-    .tilt(tilt)
-    .build()
-
-private fun CameraPosition.toMapTarget(): MapTarget? = target?.let { center ->
-    MapTarget(
-        latitude = center.latitude,
-        longitude = center.longitude,
-        zoom = zoom,
-        bearing = bearing,
-        tilt = tilt,
-    )
-}
+    .target(LatLng(latitude, longitude)).zoom(zoom.toFloat()).bearing(bearing.toFloat()).tilt(tilt.toFloat()).build()
+private fun CameraPosition.toMapTarget() = MapTarget(target.latitude, target.longitude, zoom.toDouble(), bearing.toDouble(), tilt.toDouble())
 
 private fun createMarkerBitmap(
     density: Float,
@@ -298,11 +233,3 @@ private fun createMarkerBitmap(
         }
     }
 }
-
-private const val MARKER_SOURCE_ID = "resto-restaurants-source"
-private const val LOCATION_SOURCE_ID = "resto-device-location-source"
-private const val MARKER_LAYER_ID = "resto-restaurants-layer"
-private const val RESTAURANT_ID_PROPERTY = "restaurantId"
-private const val ICON_ID_PROPERTY = "iconId"
-private const val RESTAURANT_ICON_ID = "resto-restaurant"
-private const val WISHLIST_ICON_ID = "resto-wishlist"

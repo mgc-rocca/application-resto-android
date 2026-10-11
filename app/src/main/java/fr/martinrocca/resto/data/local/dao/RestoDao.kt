@@ -33,6 +33,9 @@ interface RestoDao {
     @Query("SELECT * FROM restaurants WHERE geoapifyPlaceId = :placeId LIMIT 1")
     suspend fun findRestaurantByGeoapifyId(placeId: String): RestaurantEntity?
 
+    @Query("SELECT * FROM restaurants WHERE googlePlaceId = :placeId LIMIT 1")
+    suspend fun findRestaurantByGoogleId(placeId: String): RestaurantEntity?
+
     @Query("SELECT * FROM visits WHERE id = :visitId LIMIT 1")
     suspend fun findVisit(visitId: String): VisitEntity?
 

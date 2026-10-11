@@ -1,2 +1,4 @@
 sdk.dir=/chemin/vers/votre/Android/Sdk
-GEOAPIFY_API_KEY=votre_cle_geoapify
+# Android-restricted API keys (package + signing certificate SHA-1).
+GOOGLE_MAPS_API_KEY=votre_cle_maps_android
+GOOGLE_PLACES_API_KEY=votre_cle_places_android

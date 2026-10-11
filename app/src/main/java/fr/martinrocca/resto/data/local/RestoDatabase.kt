@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import fr.martinrocca.resto.data.local.dao.RestoDao
 import fr.martinrocca.resto.data.local.entity.DishEntity
 import fr.martinrocca.resto.data.local.entity.PhotoEntity
@@ -24,7 +26,7 @@ import fr.martinrocca.resto.data.local.entity.WishlistEntryEntity
         PhotoEntity::class,
         WishlistEntryEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(RoomConverters::class)
@@ -32,10 +34,18 @@ abstract class RestoDatabase : RoomDatabase() {
     abstract fun restoDao(): RestoDao
 
     companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE restaurants ADD COLUMN googlePlaceId TEXT")
+                db.execSQL("ALTER TABLE restaurants ADD COLUMN coordinateSource TEXT NOT NULL DEFAULT 'LEGACY'")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_restaurants_googlePlaceId ON restaurants (googlePlaceId)")
+            }
+        }
+
         fun create(context: Context): RestoDatabase = Room.databaseBuilder(
             context.applicationContext,
             RestoDatabase::class.java,
             "resto.db",
-        ).build()
+        ).addMigrations(MIGRATION_1_2).build()
     }
 }

@@ -48,6 +48,7 @@ class RestaurantRepository(
     ): String = database.withTransaction {
         validateRestaurant(draft)
         ensureGeoapifyIdIsAvailable(draft.geoapifyPlaceId)
+        ensureGoogleIdIsAvailable(draft.googlePlaceId)
 
         val now = System.currentTimeMillis()
         val restaurantId = UUID.randomUUID().toString()
@@ -73,6 +74,7 @@ class RestaurantRepository(
         val importedPhotos = photoManager.importPhotos(visit.photoUris)
         return try {
             database.withTransaction {
+                ensureGoogleIdIsAvailable(draft.googlePlaceId)
                 val now = System.currentTimeMillis()
                 val restaurantId = UUID.randomUUID().toString()
                 dao.insertRestaurant(draft.toEntity(restaurantId, now))
@@ -115,6 +117,7 @@ class RestaurantRepository(
                 "Restaurant introuvable."
             }
             ensureGeoapifyIdIsAvailable(draft.geoapifyPlaceId, restaurantId)
+            ensureGoogleIdIsAvailable(draft.googlePlaceId, restaurantId)
             val now = System.currentTimeMillis()
             dao.updateRestaurant(
                 current.copy(
@@ -123,6 +126,8 @@ class RestaurantRepository(
                     latitude = draft.latitude,
                     longitude = draft.longitude,
                     geoapifyPlaceId = draft.geoapifyPlaceId,
+                    googlePlaceId = draft.googlePlaceId,
+                    coordinateSource = draft.coordinateSource,
                     michelinStatus = draft.michelinStatus,
                     updatedAt = now,
                 ),
@@ -263,6 +268,13 @@ class RestaurantRepository(
         photoManager.deletePhotos(photoPaths)
     }
 
+    private suspend fun ensureGoogleIdIsAvailable(placeId: String?, excludedRestaurantId: String? = null) {
+        val existing = placeId?.let { dao.findRestaurantByGoogleId(it) }
+        require(existing == null || existing.id == excludedRestaurantId) {
+            "Cet établissement Google est déjà associé à une fiche. Ajoutez une visite à cette fiche."
+        }
+    }
+
     private suspend fun ensureGeoapifyIdIsAvailable(
         placeId: String?,
         excludedRestaurantId: String? = null,
@@ -345,6 +357,12 @@ class RestaurantRepository(
     }
 
     private fun validateRestaurant(draft: RestaurantDraft) {
+        require(draft.coordinateSource in setOf("LEGACY", "USER", "IMPORT")) {
+            "Les coordonnées Google ne peuvent pas être enregistrées comme coordonnées personnelles."
+        }
+        require(draft.googlePlaceId == null || (draft.googlePlaceId.isNotBlank() && draft.googlePlaceId.length <= 512)) {
+            "L’identifiant Google est invalide."
+        }
         require(draft.name.isNotBlank()) { "Le nom du restaurant est obligatoire." }
         require(draft.address.isNotBlank()) { "L’adresse du restaurant est obligatoire." }
         require((draft.latitude == null) == (draft.longitude == null)) {
@@ -379,6 +397,8 @@ private fun RestaurantDraft.toEntity(id: String, now: Long) = RestaurantEntity(
     michelinStatus = michelinStatus,
     createdAt = now,
     updatedAt = now,
+    googlePlaceId = googlePlaceId,
+    coordinateSource = coordinateSource,
 )
 
 private fun RestaurantAggregate.toDomain() = Restaurant(
@@ -396,6 +416,8 @@ private fun RestaurantAggregate.toDomain() = Restaurant(
     },
     createdAt = restaurant.createdAt,
     updatedAt = restaurant.updatedAt,
+    googlePlaceId = restaurant.googlePlaceId,
+    coordinateSource = restaurant.coordinateSource,
 )
 
 private fun VisitAggregate.toDomain() = Visit(

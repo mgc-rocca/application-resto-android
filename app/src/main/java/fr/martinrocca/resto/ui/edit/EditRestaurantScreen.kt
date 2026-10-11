@@ -29,7 +29,9 @@ import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.add.RestaurantFormFields
 import fr.martinrocca.resto.ui.add.buildRestaurantDraft
 import fr.martinrocca.resto.ui.components.BackHeader
-import fr.martinrocca.resto.ui.components.GeoapifySearchField
+import fr.martinrocca.resto.ui.components.GooglePlacesSearchField
+import fr.martinrocca.resto.ui.components.PersonalCoordinatesFields
+import fr.martinrocca.resto.ui.components.parsePersonalCoordinate
 import kotlinx.coroutines.launch
 import fr.martinrocca.resto.theme.restoButtonColors
 import fr.martinrocca.resto.theme.restoTextFieldColors
@@ -46,9 +48,11 @@ fun EditRestaurantScreen(
     var name by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.name.orEmpty()) }
     var address by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.address.orEmpty()) }
     var searchQuery by rememberSaveable(restaurant?.id) { mutableStateOf("") }
-    var latitude by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.latitude) }
-    var longitude by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.longitude) }
-    var placeId by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.geoapifyPlaceId) }
+    var latitude by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.latitude?.toString().orEmpty()) }
+    var longitude by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.longitude?.toString().orEmpty()) }
+    var legacyPlaceId by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.geoapifyPlaceId) }
+    var googlePlaceId by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.googlePlaceId) }
+    var coordinateSource by rememberSaveable(restaurant?.id) { mutableStateOf(restaurant?.coordinateSource ?: "USER") }
     var tags by rememberSaveable(restaurant?.id) {
         mutableStateOf(restaurant?.tags?.joinToString(", ") { it.name }.orEmpty())
     }
@@ -88,18 +92,20 @@ fun EditRestaurantScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            GeoapifySearchField(
+            GooglePlacesSearchField(
                 query = searchQuery,
                 onQueryChange = { searchQuery = it },
-                isConfigured = viewModel.isGeoapifyConfigured,
-                search = viewModel::searchPlaces,
-                onSuggestionSelected = { suggestion ->
-                    searchQuery = suggestion.formattedAddress
-                    name = suggestion.name
-                    address = suggestion.formattedAddress
-                    latitude = suggestion.latitude
-                    longitude = suggestion.longitude
-                    placeId = suggestion.placeId
+                service = viewModel.googlePlacesService,
+                selectedPlaceId = googlePlaceId,
+                onClearAssociation = { googlePlaceId = null },
+                onPlaceSelected = { id ->
+                    googlePlaceId = id
+                    // Associating Places does not overwrite ANY existing user or legacy field.
+                    scope.launch {
+                        viewModel.locateGooglePlace(id).onFailure {
+                            errorMessage = "Association conservée ; position Google indisponible. Vous pouvez enregistrer la fiche."
+                        }
+                    }
                 },
             )
             RestaurantFormFields(
@@ -108,9 +114,10 @@ fun EditRestaurantScreen(
                 address = address,
                 onAddressChange = {
                     address = it
-                    latitude = null
-                    longitude = null
-                    placeId = null
+                    latitude = ""
+                    longitude = ""
+                    legacyPlaceId = null
+                    coordinateSource = "USER"
                 },
                 tags = tags,
                 onTagsChange = { tags = it },
@@ -120,6 +127,9 @@ fun EditRestaurantScreen(
                 michelinStatus = MichelinStatus.valueOf(michelinName),
                 onMichelinStatusChange = { michelinName = it.name },
             )
+            PersonalCoordinatesFields(latitude, longitude) { lat, lng ->
+                latitude = lat; longitude = lng; coordinateSource = "USER"
+            }
             if (restaurant.wishlist != null) {
                 OutlinedTextField(
                     colors = restoTextFieldColors(),
@@ -146,9 +156,11 @@ fun EditRestaurantScreen(
                                     tags = listOf(tags, tagQuery).joinToString(","),
                                     knownTags = knownTags,
                                     michelinStatus = MichelinStatus.valueOf(michelinName),
-                                    latitude = latitude,
-                                    longitude = longitude,
-                                    geoapifyPlaceId = placeId,
+                                    latitude = parsePersonalCoordinate(latitude),
+                                    longitude = parsePersonalCoordinate(longitude),
+                                    geoapifyPlaceId = legacyPlaceId,
+                                    googlePlaceId = googlePlaceId,
+                                    coordinateSource = coordinateSource,
                                 )
                             }
                             val result = draft.fold(

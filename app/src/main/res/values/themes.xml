@@ -6,5 +6,13 @@
         <item name="android:statusBarColor">@color/app_background</item>
         <item name="android:navigationBarColor">@color/app_background</item>
         <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:forceDarkAllowed">false</item>
+    </style>
+    <style name="Theme.Resto.Places" parent="PlacesMaterialTheme">
+        <item name="placesColorPrimary">#31473A</item>
+        <item name="placesColorOnSurface">#202522</item>
+        <item name="placesColorOnSurfaceVariant">#6B716D</item>
+        <item name="placesColorSurface">#FFFFFF</item>
+        <item name="android:forceDarkAllowed">false</item>
     </style>
 </resources>

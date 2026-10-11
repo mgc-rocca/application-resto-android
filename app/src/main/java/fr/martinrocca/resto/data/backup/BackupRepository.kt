@@ -251,6 +251,8 @@ class BackupRepository(
                     michelinStatus = MichelinStatus.valueOf(item.getString("michelinStatus")),
                     createdAt = item.getLong("createdAt"),
                     updatedAt = item.getLong("updatedAt"),
+                    googlePlaceId = item.nullableString("googlePlaceId"),
+                    coordinateSource = item.optString("coordinateSource", "LEGACY"),
                 )
             },
             visits = root.objects("visits") { item ->
@@ -328,6 +330,12 @@ class BackupRepository(
         snapshot.photos.map(BackupPhoto::entity).uniqueIds(PhotoEntity::id, "photos")
 
         snapshot.restaurants.forEach { restaurant ->
+            require(restaurant.coordinateSource in setOf("LEGACY", "USER", "IMPORT")) {
+                "La sauvegarde contient une source de coordonnées non autorisée."
+            }
+            require(restaurant.googlePlaceId == null || (restaurant.googlePlaceId.isNotBlank() && restaurant.googlePlaceId.length <= 512)) {
+                "Un identifiant Google est invalide."
+            }
             require(restaurant.name.isNotBlank() && restaurant.address.isNotBlank()) {
                 "Un restaurant contient des champs obligatoires vides."
             }
@@ -341,6 +349,10 @@ class BackupRepository(
             snapshot.restaurants.mapNotNull(RestaurantEntity::geoapifyPlaceId).distinct().size ==
                 snapshot.restaurants.count { it.geoapifyPlaceId != null },
         ) { "Plusieurs restaurants possèdent le même identifiant d’adresse." }
+        val googleIds = snapshot.restaurants.mapNotNull(RestaurantEntity::googlePlaceId)
+        require(googleIds.distinct().size == googleIds.size) {
+            "Plusieurs restaurants possèdent le même identifiant Google."
+        }
 
         snapshot.visits.forEach { visit ->
             require(visit.restaurantId in restaurantIds) { "Une visite référence un restaurant absent." }
@@ -492,6 +504,8 @@ private fun BackupSnapshot.toJson(photoPaths: Map<PhotoEntity, String>): JSONObj
             putNullable("latitude", restaurant.latitude)
             putNullable("longitude", restaurant.longitude)
             putNullable("geoapifyPlaceId", restaurant.geoapifyPlaceId)
+            putNullable("googlePlaceId", restaurant.googlePlaceId)
+            put("coordinateSource", restaurant.coordinateSource)
             put("michelinStatus", restaurant.michelinStatus.name)
             put("createdAt", restaurant.createdAt)
             put("updatedAt", restaurant.updatedAt)

@@ -39,7 +39,9 @@ import fr.martinrocca.resto.data.photo.PhotoManager
 import fr.martinrocca.resto.domain.model.MichelinStatus
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.BackHeader
-import fr.martinrocca.resto.ui.components.GeoapifySearchField
+import fr.martinrocca.resto.ui.components.GooglePlacesSearchField
+import fr.martinrocca.resto.ui.components.PersonalCoordinatesFields
+import fr.martinrocca.resto.ui.components.parsePersonalCoordinate
 import java.time.LocalDate
 import kotlinx.coroutines.launch
 import fr.martinrocca.resto.theme.restoButtonColors
@@ -58,9 +60,9 @@ fun AddRestaurantScreen(
     var name by rememberSaveable { mutableStateOf("") }
     var address by rememberSaveable { mutableStateOf("") }
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    var latitude by rememberSaveable { mutableStateOf<Double?>(null) }
-    var longitude by rememberSaveable { mutableStateOf<Double?>(null) }
-    var geoapifyPlaceId by rememberSaveable { mutableStateOf<String?>(null) }
+    var latitude by rememberSaveable { mutableStateOf("") }
+    var longitude by rememberSaveable { mutableStateOf("") }
+    var googlePlaceId by rememberSaveable { mutableStateOf<String?>(null) }
     var tags by rememberSaveable { mutableStateOf("") }
     var tagQuery by rememberSaveable { mutableStateOf("") }
     var michelinName by rememberSaveable { mutableStateOf(MichelinStatus.ABSENT.name) }
@@ -98,18 +100,21 @@ fun AddRestaurantScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            GeoapifySearchField(
+            GooglePlacesSearchField(
                 query = searchQuery,
                 onQueryChange = { searchQuery = it },
-                isConfigured = viewModel.isGeoapifyConfigured,
-                search = viewModel::searchPlaces,
-                onSuggestionSelected = { suggestion ->
-                    searchQuery = suggestion.formattedAddress
-                    name = suggestion.name
-                    address = suggestion.formattedAddress
-                    latitude = suggestion.latitude
-                    longitude = suggestion.longitude
-                    geoapifyPlaceId = suggestion.placeId
+                service = viewModel.googlePlacesService,
+                selectedPlaceId = googlePlaceId,
+                onClearAssociation = { googlePlaceId = null },
+                onPlaceSelected = { id ->
+                    googlePlaceId = id
+                    // User-authored search text is safe to use; Google display text never enters Room.
+                    if (name.isBlank()) name = searchQuery.trim()
+                    scope.launch {
+                        viewModel.locateGooglePlace(id).onFailure {
+                            errorMessage = "Association conservée ; position Google indisponible. Vous pouvez enregistrer la fiche."
+                        }
+                    }
                 },
             )
 
@@ -119,9 +124,8 @@ fun AddRestaurantScreen(
                 address = address,
                 onAddressChange = {
                     address = it
-                    latitude = null
-                    longitude = null
-                    geoapifyPlaceId = null
+                    latitude = ""
+                    longitude = ""
                 },
                 tags = tags,
                 onTagsChange = { tags = it },
@@ -131,6 +135,8 @@ fun AddRestaurantScreen(
                 michelinStatus = michelinStatus,
                 onMichelinStatusChange = { michelinName = it.name },
             )
+
+            PersonalCoordinatesFields(latitude, longitude) { lat, lng -> latitude = lat; longitude = lng }
 
             HorizontalDivider()
             Row(
@@ -201,9 +207,9 @@ fun AddRestaurantScreen(
                                         tags = listOf(tags, tagQuery).joinToString(","),
                                         knownTags = knownTags,
                                         michelinStatus = michelinStatus,
-                                        latitude = latitude,
-                                        longitude = longitude,
-                                        geoapifyPlaceId = geoapifyPlaceId,
+                                        latitude = parsePersonalCoordinate(latitude),
+                                        longitude = parsePersonalCoordinate(longitude),
+                                        googlePlaceId = googlePlaceId,
                                     )
                                 }
                                 val result = input.fold(
