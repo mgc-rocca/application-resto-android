@@ -38,11 +38,13 @@ Prérequis : Android Studio, JDK 17 et SDK Android 35. Ouvrir ce dossier comme p
 ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease assembleDebugAndroidTest --no-daemon
 ```
 
-APK Debug : `app/build/outputs/apk/debug/app-debug.apk`. Pour exécuter les tests Room/ZIP sur Android connecté :
+APK Debug : `app/build/outputs/apk/debug/app-debug.apk`. Pour exécuter les tests Room/ZIP sur un **émulateur de test** connecté :
 
 ```bash
 ./gradlew connectedDebugAndroidTest --no-daemon
 ```
+
+Réservez `connectedDebugAndroidTest` à un émulateur ou un appareil de test sans carnet personnel : Gradle peut désinstaller l’APK après les tests et supprimer ses données. Sur votre téléphone quotidien, effectuez uniquement les parcours manuels avec un APK installé en mise à jour et la même signature.
 
 La CI de PR exécute les tests JVM, le lint, compile Debug et Release, puis lance les tests instrumentés sur émulateur. Les recherches Google réelles nécessitent toujours vos clés et les tests manuels décrits dans le rapport.
 
