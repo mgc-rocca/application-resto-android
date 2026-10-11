@@ -1,6 +1,8 @@
 package fr.martinrocca.resto.data.backup
 
 import android.net.Uri
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -10,6 +12,7 @@ import fr.martinrocca.resto.data.repository.RestaurantRepository
 import fr.martinrocca.resto.domain.model.RestaurantDraft
 import java.io.File
 import java.util.zip.ZipFile
+import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -20,7 +23,7 @@ import org.junit.runner.RunWith
 class GoogleBackupCompatibilityTest {
     @Test fun restoreV1ThenRoundTripV11PreservesIdsRelationsPhotosAndPersonalData() = runBlocking {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val context = instrumentation.targetContext
+        val context = IsolatedBackupContext(instrumentation.targetContext)
         val database = Room.inMemoryDatabaseBuilder(context, RestoDatabase::class.java).build()
         val photos = PhotoManager(context)
         val backups = BackupRepository(context, database, photos)
@@ -79,11 +82,12 @@ class GoogleBackupCompatibilityTest {
             photos.deletePhotos(database.restoDao().getAllPhotos().map { it.relativePath })
             database.close()
             original.delete(); output.delete()
+            context.cleanUp()
         }
     }
 
     @Test fun googleAssociationDoesNotOverwriteExistingFieldsAndDuplicateAssociationIsRejected() = runBlocking {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val context = IsolatedBackupContext(InstrumentationRegistry.getInstrumentation().targetContext)
         val db = Room.inMemoryDatabaseBuilder(context, RestoDatabase::class.java).build()
         val repository = RestaurantRepository(db, PhotoManager(context))
         try {
@@ -101,6 +105,14 @@ class GoogleBackupCompatibilityTest {
             repository.createWishlistRestaurant(original.copy(name = "Manuel 1"), null)
             repository.createWishlistRestaurant(original.copy(name = "Manuel 2"), null)
             assertEquals(3, db.restoDao().getAllRestaurants().size) // Multiple NULL IDs remain allowed.
-        } finally { db.close() }
+        } finally { db.close(); context.cleanUp() }
     }
+}
+
+/** Tests never read, replace or clean the user's actual photo directory. */
+private class IsolatedBackupContext(base: Context) : ContextWrapper(base) {
+    private val root = File(base.cacheDir, "backup-test-${UUID.randomUUID()}").apply { mkdirs() }
+    override fun getFilesDir(): File = File(root, "files").apply { mkdirs() }
+    override fun getCacheDir(): File = File(root, "cache").apply { mkdirs() }
+    fun cleanUp() { root.deleteRecursively() }
 }

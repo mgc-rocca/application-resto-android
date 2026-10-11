@@ -39,6 +39,7 @@ Le SDK Android Places est une bibliothèque Gradle ; le service à activer pour 
 ## 5. Récupérer vos SHA-1 dans Android Studio
 
 1. Ouvrez le dossier Resto dans Android Studio, puis attendez la synchronisation Gradle.
+   Utilisez une version récente d’Android Studio compatible avec AGP 8.13.2. Si Android Studio signale un plugin trop récent, mettez l’IDE à jour ; ne rétrogradez pas le plugin du projet pour contourner l’erreur.
 2. Si un SDK manque, ouvrez **Tools → SDK Manager** et installez **Android SDK Platform 35** et ses outils. Utilisez **JDK 17** dans **Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK**. Le wrapper du projet gère Gradle.
 3. Ouvrez l’onglet **Terminal** au bas d’Android Studio.
 4. À la racine du projet, exécutez :
@@ -46,6 +47,8 @@ Le SDK Android Places est une bibliothèque Gradle ; le service à activer pour 
 ```bash
 ./gradlew signingReport
 ```
+
+Dans le terminal Windows, utilisez `gradlew.bat signingReport`. Pour les autres commandes de ce guide, remplacez également `./gradlew` par `gradlew.bat` si nécessaire.
 
 5. Repérez le bloc **Variant: debug**, puis copiez sa ligne **SHA1**. Ne confondez pas SHA1 et SHA-256.
 6. Le nom de package est exactement **`fr.martinrocca.resto`**, en Debug comme en Release.

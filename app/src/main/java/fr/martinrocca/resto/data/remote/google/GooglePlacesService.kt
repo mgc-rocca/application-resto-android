@@ -5,10 +5,12 @@ import android.content.pm.PackageManager
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.tasks.Task
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.FetchPlaceRequest
+import com.google.android.libraries.places.api.net.PlacesStatusCodes
 import fr.martinrocca.resto.BuildConfig
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -94,8 +96,8 @@ private suspend fun <T> Task<T>.awaitResult(): T = suspendCancellableCoroutine {
 }
 
 fun googleErrorMessage(error: Throwable): String = when ((error as? ApiException)?.statusCode) {
-    7 -> "Connexion impossible à Google. Réessayez ou utilisez la saisie manuelle."
-    9010 -> "Quota Google atteint. Réessayez plus tard ou utilisez la saisie manuelle."
-    9011, 9012 -> "Google a refusé la requête. Vérifiez la clé, les API et les restrictions SHA-1."
+    CommonStatusCodes.NETWORK_ERROR -> "Connexion impossible à Google. Réessayez ou utilisez la saisie manuelle."
+    PlacesStatusCodes.OVER_QUERY_LIMIT -> "Limite Google atteinte. Vérifiez les quotas et la facturation, ou utilisez la saisie manuelle."
+    PlacesStatusCodes.REQUEST_DENIED, PlacesStatusCodes.INVALID_REQUEST -> "Google a refusé la requête. Vérifiez la clé, les API et les restrictions SHA-1."
     else -> "Recherche Google indisponible. Vérifiez la connexion et la configuration ; la saisie manuelle reste disponible."
 }

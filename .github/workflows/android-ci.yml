@@ -32,11 +32,13 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
 
       - name: Test, lint and assemble debug/release APKs
         run: |
           if ! ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease assembleDebugAndroidTest --stacktrace --no-daemon > build-verification.log 2>&1; then
-            rg -n -m 30 '^e:|What went wrong|^> |^FAILURE|requires' build-verification.log || true
+            grep -n -m 30 -E '^e:|What went wrong|^> |^FAILURE|requires' build-verification.log || true
             tail -n 60 build-verification.log
             exit 1
           fi
@@ -73,6 +75,8 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
       - name: Enable KVM for Android emulator
         run: |
           sudo chmod 666 /dev/kvm
