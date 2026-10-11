@@ -65,8 +65,46 @@ jobs:
           path: app/build/reports/lint-results-debug.html
           if-no-files-found: ignore
 
+  stable-v1-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+      - name: Prepare the exact stable V1 and its isolated export test
+        run: |
+          git fetch --depth=1 origin 3413bcc3d57a14771c00c9da83b8455701fcbf30
+          git worktree add --detach ../resto-stable-v1 3413bcc3d57a14771c00c9da83b8455701fcbf30
+          mkdir -p ../resto-stable-v1/app/src/androidTest/java/fr/martinrocca/resto/compatibility
+          mkdir -p ../resto-stable-v1/app/src/androidTest/assets
+          cp tools/compatibility/StableV1ExportTest.kt ../resto-stable-v1/app/src/androidTest/java/fr/martinrocca/resto/compatibility/
+          cp app/src/androidTest/assets/resto-v1-fixture.zip ../resto-stable-v1/app/src/androidTest/assets/
+      - name: Enable KVM
+        run: sudo chmod 666 /dev/kvm
+      - name: Export reference ZIP and database with the V1 APK
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: default
+          disable-animations: true
+          script: bash tools/compatibility/export-stable-v1.sh
+      - name: Upload V1 reference data and provenance
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stable-v1-reference
+          path: build/compatibility/
+          if-no-files-found: ignore
+
   local-data-instrumentation:
-    needs: verify
+    needs: [verify, stable-v1-export]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -78,6 +116,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: false
+      - name: Use ZIP and database exported by the stable V1
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: stable-v1-reference
+          path: app/src/androidTest/assets/
       - name: Enable KVM for Android emulator
         run: |
           sudo chmod 666 /dev/kvm

@@ -1,11 +1,10 @@
 package fr.martinrocca.resto.data.local
 
-import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
-import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,36 +16,21 @@ class GoogleMigrationTest {
         val context = instrumentation.targetContext
         val fileName = "migration-v1-google-test.db"
         context.deleteDatabase(fileName)
-        val schema = JSONObject(instrumentation.context.assets.open(
-            "fr.martinrocca.resto.data.local.RestoDatabase/1.json",
-        ).bufferedReader().use { it.readText() }).getJSONObject("database")
+        val file = context.getDatabasePath(fileName)
+        file.parentFile!!.mkdirs()
+        // This file is exported by the real stable V1 APK, including its Room identity.
+        instrumentation.context.assets.open("resto-stable-v1.db").use { source ->
+            file.outputStream().use { source.copyTo(it) }
+        }
         val tables = listOf("restaurants", "visits", "tags", "restaurant_tags", "wishlist_entries", "dishes", "photos")
         val before: Map<String, List<List<String?>>>
-        context.openOrCreateDatabase(fileName, Context.MODE_PRIVATE, null).use { db ->
-            db.execSQL("PRAGMA foreign_keys=ON")
-            val entities = schema.getJSONArray("entities")
-            for (i in 0 until entities.length()) {
-                val entity = entities.getJSONObject(i)
-                db.execSQL(entity.getString("createSql").replace("\${TABLE_NAME}", entity.getString("tableName")))
-                val indices = entity.getJSONArray("indices")
-                for (j in 0 until indices.length()) db.execSQL(indices.getJSONObject(j).getString("createSql").replace("\${TABLE_NAME}", entity.getString("tableName")))
-            }
-            val setup = schema.getJSONArray("setupQueries")
-            for (i in 0 until setup.length()) db.execSQL(setup.getString(i))
-            db.execSQL("INSERT INTO restaurants VALUES ('legacy','V1 Restaurant','Adresse V1',48.8,2.3,'geo-legacy','TWO_STARS',10,20)")
-            db.execSQL("INSERT INTO restaurants VALUES ('wish','Envie V1','Adresse envie',NULL,NULL,NULL,'ABSENT',11,21)")
-            db.execSQL("INSERT INTO visits VALUES ('visit','legacy','2026-09-20',8,7,6,9,8,'Commentaire V1',10,20)")
-            db.execSQL("INSERT INTO tags VALUES ('tag','Français','francais',10)")
-            db.execSQL("INSERT INTO restaurant_tags VALUES ('legacy','tag')")
-            db.execSQL("INSERT INTO wishlist_entries VALUES ('wish',10,'À découvrir')")
-            db.execSQL("INSERT INTO dishes VALUES ('dish','visit','Plat V1',2450,'EUR',0)")
-            db.execSQL("INSERT INTO photos VALUES ('photo','visit','photos/legacy.jpg','image/jpeg',0,10)")
+        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            assertEquals(1, db.version)
             before = tables.associateWith { table ->
                 db.rawQuery("SELECT * FROM $table ORDER BY 1", null).use { cursor ->
                     buildList { while (cursor.moveToNext()) add((0 until cursor.columnCount).map { if (cursor.isNull(it)) null else cursor.getString(it) }) }
                 }
             }
-            db.version = 1
         }
         val upgraded = Room.databaseBuilder(context, RestoDatabase::class.java, fileName)
             .addMigrations(RestoDatabase.MIGRATION_1_2).build()

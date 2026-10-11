@@ -29,7 +29,7 @@ class GoogleBackupCompatibilityTest {
         val backups = BackupRepository(context, database, photos)
         val original = File(context.cacheDir, "resto-v1-import.zip")
         val output = File(context.cacheDir, "resto-v11-export.zip")
-        val fixture = instrumentation.context.assets.open("resto-v1-fixture.zip").use { it.readBytes() }
+        val fixture = instrumentation.context.assets.open("resto-stable-v1.zip").use { it.readBytes() }
         original.writeBytes(fixture)
         try {
             backups.restoreFrom(Uri.fromFile(original))
