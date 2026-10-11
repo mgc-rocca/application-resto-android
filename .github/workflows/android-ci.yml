@@ -38,7 +38,8 @@ jobs:
       - name: Test, lint and assemble debug/release APKs
         run: |
           if ! ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease assembleDebugAndroidTest --stacktrace --no-daemon > build-verification.log 2>&1; then
-            grep -n -m 30 -E '^e:|What went wrong|^> |^FAILURE|requires' build-verification.log || true
+            grep -n -m 30 -E '^e:|^FAILURE|requires' build-verification.log || true
+            grep -n -A 30 -m 1 'What went wrong' build-verification.log || true
             tail -n 60 build-verification.log
             exit 1
           fi
