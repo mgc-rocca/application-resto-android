@@ -21,7 +21,7 @@ import org.junit.runner.RunWith
 /** Copied by CI into commit 3413bcc, then compiled and run ONLY with the stable V1. */
 @RunWith(AndroidJUnit4::class)
 class StableV1ExportTest {
-    @Test fun exportZipAndCheckpointedDatabaseUsingTheRealStableV1Code() = runBlocking {
+    @Test fun exportZipAndCheckpointedDatabaseUsingTheRealStableV1Code() = runBlocking<Unit> {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val base = instrumentation.targetContext
         val isolated = ExportContext(base)
