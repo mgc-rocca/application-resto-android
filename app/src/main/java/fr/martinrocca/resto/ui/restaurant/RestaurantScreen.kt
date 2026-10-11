@@ -44,6 +44,7 @@ import fr.martinrocca.resto.domain.model.Visit
 import fr.martinrocca.resto.domain.model.shareText
 import fr.martinrocca.resto.ui.RestoViewModel
 import fr.martinrocca.resto.ui.components.BackHeader
+import fr.martinrocca.resto.ui.components.GooglePlaceDetailsButton
 import fr.martinrocca.resto.ui.components.RatingBadge
 import fr.martinrocca.resto.ui.components.RestaurantRatingBadge
 import fr.martinrocca.resto.ui.components.LocalPhoto
@@ -145,6 +146,7 @@ fun RestaurantScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    restaurant.googlePlaceId?.let { GooglePlaceDetailsButton(it) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = {

@@ -2,6 +2,7 @@ package fr.martinrocca.resto
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import android.content.res.Configuration
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +15,13 @@ import fr.martinrocca.resto.ui.RestoApp
 import fr.martinrocca.resto.ui.RestoViewModel
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val configuration = Configuration(newBase.resources.configuration).apply {
+            uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_NO
+        }
+        super.attachBaseContext(newBase.createConfigurationContext(configuration))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -23,7 +31,7 @@ class MainActivity : ComponentActivity() {
                 factory = RestoViewModel.Factory(
                     application.appContainer.restaurantRepository,
                     application.appContainer.backupRepository,
-                    application.appContainer.geoapifyService,
+                    application.appContainer.googlePlacesService,
                 ),
             )
             RestoTheme {

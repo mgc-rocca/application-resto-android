@@ -8,6 +8,7 @@ class BackupFormatRulesTest {
     @Test
     fun `only declared backup versions are accepted`() {
         assertTrue(isSupportedBackupVersion(CURRENT_BACKUP_VERSION))
+        assertTrue(isSupportedBackupVersion(1)) // Archives created by the stable V1 remain readable.
         assertFalse(isSupportedBackupVersion(MIN_SUPPORTED_BACKUP_VERSION - 1))
         assertFalse(isSupportedBackupVersion(CURRENT_BACKUP_VERSION + 1))
     }

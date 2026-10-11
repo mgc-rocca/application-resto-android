@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MyLocation
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -32,6 +33,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,12 +49,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import fr.martinrocca.resto.domain.model.Restaurant
 import fr.martinrocca.resto.domain.model.cuisineFilters
 import fr.martinrocca.resto.navigation.AddButtonOverhang
 import fr.martinrocca.resto.theme.restoFilledIconButtonColors
 import fr.martinrocca.resto.ui.RestoViewModel
-import fr.martinrocca.resto.ui.components.GeoapifySearchField
+import fr.martinrocca.resto.ui.components.GooglePlacesSearchField
 import fr.martinrocca.resto.ui.components.RestaurantFilterSheet
 import fr.martinrocca.resto.ui.components.RestaurantFiltersButton
 import fr.martinrocca.resto.ui.components.rememberRestaurantFilterState
@@ -71,18 +77,23 @@ fun MapScreen(
     restaurants: List<Restaurant>,
     viewModel: RestoViewModel,
     onRestaurantClick: (String) -> Unit,
+    onOpenJournal: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
     var addressQuery by rememberSaveable { mutableStateOf("") }
     var filterName by rememberSaveable { mutableStateOf(MapFilter.ALL.name) }
-    val filters = rememberRestaurantFilterState(initialMinimumRating = 5)
+    val filters = rememberRestaurantFilterState()
     var showFilters by rememberSaveable { mutableStateOf(false) }
     val cuisines = remember(restaurants) { cuisineFilters(restaurants) }
     val activeFilters = filters.activeCount + if (filterName == MapFilter.ALL.name) 0 else 1
     var overlayHeight by remember { mutableIntStateOf(0) }
     var cameraTarget by remember { mutableStateOf<MapTarget?>(null) }
     var cameraRequestId by remember { mutableIntStateOf(0) }
+    var mapError by remember { mutableStateOf<String?>(null) }
+    var searchPlaceId by rememberSaveable { mutableStateOf<String?>(null) }
+    var showUnmapped by rememberSaveable { mutableStateOf(false) }
+    var locatingPlaceId by remember { mutableStateOf<String?>(null) }
     var deviceLocation by remember { mutableStateOf<MapTarget?>(null) }
     var locating by remember { mutableStateOf(false) }
     var locationError by remember { mutableStateOf<String?>(null) }
@@ -138,15 +149,66 @@ fun MapScreen(
     }
     val isNetworkAvailable = rememberIsNetworkAvailable()
     val filter = MapFilter.valueOf(filterName)
-    val mappedRestaurants = remember(restaurants, filter, filters.michelin, filters.cuisineKey, filters.categories, filters.minimumRating, filters.priceRange) {
-        restaurants.filter { restaurant ->
-            restaurant.latitude != null && restaurant.longitude != null &&
-                filters.matches(restaurant) && when (filter) {
-                MapFilter.ALL -> restaurant.isVisited || restaurant.wishlist != null
-                MapFilter.VISITED -> restaurant.isVisited
-                MapFilter.WISHLIST -> restaurant.wishlist != null
+    val googleCoordinates by viewModel.googleCoordinates.collectAsStateWithLifecycle()
+    val servicesError = remember(context) { viewModel.googlePlacesService.mapError() }
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (isActive) {
+                viewModel.googlePlacesService.expireCoordinates()
+                delay(60_000)
             }
         }
+    }
+    val visibleRestaurants = restaurants.filter { restaurant ->
+        filters.matches(restaurant) && when (filter) {
+            MapFilter.ALL -> restaurant.isVisited || restaurant.wishlist != null
+            MapFilter.VISITED -> restaurant.isVisited
+            MapFilter.WISHLIST -> restaurant.wishlist != null
+        }
+    }
+    val mappedRestaurants = visibleRestaurants.mapNotNull { restaurant ->
+        val cached = restaurant.googlePlaceId?.let { id ->
+            googleCoordinates[id]?.let { viewModel.googlePlacesService.cachedCoordinates(id) }
+        }
+        val lat = restaurant.latitude ?: cached?.latitude
+        val lng = restaurant.longitude ?: cached?.longitude
+        if (lat == null || lng == null) null else RestaurantMarker(restaurant, lat, lng)
+    }
+    val unmappedRestaurants = visibleRestaurants.filter { restaurant -> mappedRestaurants.none { it.restaurant.id == restaurant.id } }
+    if (showUnmapped) {
+        AlertDialog(
+            onDismissRequest = { showUnmapped = false },
+            title = { Text("Adresses à localiser") },
+            text = {
+                Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Choisissez une adresse. La position Google est chargée uniquement à votre demande.")
+                    unmappedRestaurants.forEach { restaurant ->
+                        Text(restaurant.name, style = MaterialTheme.typography.titleSmall)
+                        Text(restaurant.address, style = MaterialTheme.typography.bodySmall)
+                        Row {
+                            TextButton(onClick = { showUnmapped = false; onRestaurantClick(restaurant.id) }) { Text("Ouvrir la fiche") }
+                            restaurant.googlePlaceId?.let { id ->
+                                TextButton(enabled = locatingPlaceId == null && isNetworkAvailable, onClick = {
+                                    locatingPlaceId = id
+                                    scope.launch {
+                                        try {
+                                            viewModel.locateGooglePlace(id).onSuccess { coordinates ->
+                                                cameraTarget = MapTarget(coordinates.latitude, coordinates.longitude, 15.0)
+                                                cameraRequestId++
+                                                showUnmapped = false
+                                                locationError = null
+                                            }.onFailure { locationError = it.message ?: "Position Google indisponible." }
+                                        } finally { locatingPlaceId = null }
+                                    }
+                                }) { Text(if (locatingPlaceId == id) "Chargement…" else "Localiser") }
+                            }
+                        }
+                    }
+                    locationError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showUnmapped = false }) { Text("Fermer") } },
+        )
     }
 
     if (showFilters) {
@@ -183,6 +245,8 @@ fun MapScreen(
     ) {
         RestaurantMap(
             restaurants = mappedRestaurants,
+            servicesError = servicesError,
+            onMapError = { mapError = it },
             initialCameraTarget = restoredCameraTarget,
             cameraTarget = cameraTarget,
             cameraRequestId = cameraRequestId,
@@ -222,17 +286,24 @@ fun MapScreen(
                     Text("Carte", style = MaterialTheme.typography.headlineMedium)
                     RestaurantFiltersButton(activeFilters) { showFilters = true }
                 }
-                GeoapifySearchField(
+                GooglePlacesSearchField(
                     query = addressQuery,
                     onQueryChange = { addressQuery = it },
-                    isConfigured = viewModel.isGeoapifyConfigured,
-                    search = viewModel::searchPlaces,
-                    onSuggestionSelected = { suggestion ->
-                        addressQuery = suggestion.formattedAddress
-                        cameraTarget = MapTarget(suggestion.latitude, suggestion.longitude, 15.0)
-                        cameraRequestId++
+                    service = viewModel.googlePlacesService,
+                    restaurantsOnly = false,
+                    bias = deviceLocation ?: restoredCameraTarget,
+                    selectedPlaceId = searchPlaceId,
+                    onClearAssociation = { searchPlaceId = null },
+                    onPlaceSelected = { id ->
+                        searchPlaceId = id
+                        scope.launch {
+                            viewModel.locateGooglePlace(id).onSuccess { coordinates ->
+                                cameraTarget = MapTarget(coordinates.latitude, coordinates.longitude, 15.0)
+                                cameraRequestId++
+                                locationError = null
+                            }.onFailure { locationError = it.message ?: "Position Google indisponible." }
+                        }
                     },
-                    label = "Adresse",
                 )
                 Text(
                     text = buildString {
@@ -242,6 +313,13 @@ fun MapScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (unmappedRestaurants.isNotEmpty()) {
+                    TextButton(onClick = { showUnmapped = true }) { Text("${unmappedRestaurants.size} adresses à localiser") }
+                }
+                (servicesError ?: mapError)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                if (servicesError != null || mapError != null || !isNetworkAvailable) {
+                    TextButton(onClick = onOpenJournal) { Text("Ouvrir le Journal") }
+                }
                 if (!isNetworkAvailable) {
                     Text(
                         text = "Hors connexion : le fond de carte et la recherche peuvent être incomplets.",

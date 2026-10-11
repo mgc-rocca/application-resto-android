@@ -122,6 +122,13 @@ fun RestoApp(
                     restaurants = restaurants,
                     viewModel = viewModel,
                     onRestaurantClick = { navController.navigate(Routes.restaurant(it)) },
+                    onOpenJournal = {
+                        navController.navigate(AppDestination.Journal.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     contentPadding = contentPadding,
                 )
             }

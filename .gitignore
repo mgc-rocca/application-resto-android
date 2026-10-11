@@ -1,5 +1,6 @@
 *.iml
 .gradle/
+.kotlin/
 .idea/
 local.properties
 **/build/
@@ -8,4 +9,5 @@ captures/
 .cxx/
 *.jks
 *.keystore
-GEOAPIFY_API_KEY
+GOOGLE_MAPS_API_KEY
+GOOGLE_PLACES_API_KEY

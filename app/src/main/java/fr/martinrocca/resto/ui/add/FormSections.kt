@@ -176,12 +176,16 @@ fun buildRestaurantDraft(
     latitude: Double? = null,
     longitude: Double? = null,
     geoapifyPlaceId: String? = null,
+    googlePlaceId: String? = null,
+    coordinateSource: String = "USER",
 ): RestaurantDraft = RestaurantDraft(
     name = name,
     address = address,
     latitude = latitude,
     longitude = longitude,
     geoapifyPlaceId = geoapifyPlaceId,
+    googlePlaceId = googlePlaceId,
+    coordinateSource = coordinateSource,
     tags = canonicalizeTags(tags, knownTags),
     michelinStatus = michelinStatus,
 )

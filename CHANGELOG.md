@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.1.0 — migration Google (branche de développement)
+
+- Google Maps SDK remplace MapLibre/OpenFreeMap ; style beige/sauge et pins V1 préservés.
+- Basic Place Autocomplete et Place Details de Places UI Kit ; recherche internationale, association ID Google facultative, aucune note/avis Google.
+- Room 1 → 2 additive ; anciennes données et IDs Geoapify préservés, aucun fallback destructif.
+- ZIP 2 compatible avec ZIP 1 ; seuls les champs personnels et l’ID Google sont exportés.
+- Coordonnées Google séparées en cache mémoire limité ; recharge à la demande après fermeture complète.
+- Carte sans filtre initial ; thème clair indépendant du thème système ; accès au Journal si Google est indisponible.
+- Documentation Google Cloud/EEE, coûts et tests, tests de migration et sauvegarde ; aucune clé commise.
+
 ## 1.0.0
 
 - ouverture sur Carte avec l’onglet correspondant sélectionné ;

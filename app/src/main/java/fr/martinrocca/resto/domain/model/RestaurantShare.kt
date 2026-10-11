@@ -17,7 +17,7 @@ fun Restaurant.shareText(): String {
     val firstAddressLine = cleanAddress.lineSequence().firstOrNull().orEmpty()
     val nameKey = sharedHeadingKey(cleanName)
     val firstLineKey = sharedHeadingKey(firstAddressLine)
-    // Geoapify may return one comma-separated line rather than a multiline address.
+    // Legacy and user addresses may be comma-separated rather than multiline.
     val addressIncludesName = nameKey.isNotEmpty() &&
         (firstLineKey == nameKey || firstLineKey.startsWith("$nameKey,"))
     val identity = listOfNotNull(cleanName.takeUnless { addressIncludesName }, cleanAddress)
@@ -32,6 +32,7 @@ fun Restaurant.shareText(): String {
         "$latitude,$longitude"
     } else identity.lineSequence().joinToString(" ") { it.trim() }
     val directionsUrl = "https://www.google.com/maps/dir/?api=1&destination=" +
-        URLEncoder.encode(destination, "UTF-8")
+        URLEncoder.encode(destination, "UTF-8") +
+        (googlePlaceId?.let { "&destination_place_id=" + URLEncoder.encode(it, "UTF-8") } ?: "")
     return listOf(identity, tags, directionsUrl).filter(String::isNotBlank).joinToString("\n\n")
 }

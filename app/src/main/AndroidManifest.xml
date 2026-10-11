@@ -17,6 +17,10 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Resto">
+        <meta-data android:name="com.google.android.geo.API_KEY" android:value="${GOOGLE_MAPS_API_KEY}" />
+        <!-- Required by Maps 20.0.0 on devices using the legacy renderer. -->
+        <uses-library android:name="org.apache.http.legacy" android:required="false" />
+        <activity android:name=".ui.google.GooglePlaceDetailsActivity" android:exported="false" android:theme="@style/Theme.Resto" />
         <activity
             android:name=".MainActivity"
             android:exported="true">

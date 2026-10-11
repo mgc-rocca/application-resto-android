@@ -1,182 +1,61 @@
 # Resto
 
-Resto est un carnet gastronomique Android personnel, local et sans compte. Il permet de mémoriser les restaurants visités, les adresses à essayer et l’historique détaillé de chaque repas.
+Carnet gastronomique Android personnel, local et sans compte. La V1.1 remplace la recherche Geoapify et la carte MapLibre/OpenFreeMap par Google Maps Platform, en conservant le carnet Room et les parcours V1.
 
-## Fonctionnalités
+## Utiliser Resto V1.1
 
-- ouverture sur Carte, onglet sélectionné, avec le filtre Note ≥ 5 actif au premier affichage ;
-- Journal avec cartes de même hauteur sur deux lignes (nom, puis tags), prix compact en bas à droite, recherche dans les noms, adresses, tags et commentaires ;
-- même bouton et panneau de filtres dans le Journal et sur la carte : Michelin, qualité-prix, gastro, cuisines, note minimale et prix ;
-- filtres Michelin, catégories et cuisines dans les Envies ;
-- liste d’envies transformée automatiquement lors de la première visite ;
-- plusieurs visites par restaurant, avec une note unique de 1 à 10 choisie sur un slider ;
-- note du restaurant calculée sur toutes ses visites, affichée à une décimale dès la deuxième visite ;
-- sélection de la date de visite dans un calendrier ;
-- réutilisation et normalisation des tags de cuisine déjà créés ;
-- tranche de prix facultative par restaurant : <15€, 15€ - 40€, 40€-80€, >80€ ;
-- jusqu’à 5 photos par visite, copiées dans le stockage privé de l’application ;
-- carte MapLibre avec fond OpenFreeMap, affichée sous un panneau transparent, centrée sur Paris au premier affichage ;
-- pins restaurants et envies uniformément vert sauge foncé `#31473A`, opaques, sans note chiffrée ;
-- palette des notes conservée uniquement dans les badges et le slider ;
-- panneau de filtres de la carte : visites/envies, cuisine, catégories, Michelin, prix et note minimale (≥5, ≥6, ≥7 ou ≥8) ;
-- localisation ponctuelle à la demande, via Android (sans dépendance aux services Google) ;
-- partage texte sans répétition du nom, avec adresse, tags et lien Google Maps d’itinéraire ;
-- recherche et autocomplétion d’adresses avec Geoapify ;
-- statistiques locales, avec accès au Journal filtré depuis chaque cartouche Michelin ;
-- modification et suppression confirmée des restaurants et visites ;
-- export et restauration d’une sauvegarde ZIP versionnée (JSON + photos).
+- Ouverture sur **Carte**, sans filtre actif par défaut. Les filtres personnels de note, Michelin, cuisine, catégories et prix restent disponibles.
+- Journal local, Envies, Statistiques, visites, notes personnelles 1–10 et moyennes, commentaires, calendrier, tags normalisés et jusqu’à cinq photos personnelles par visite.
+- Pins V1 sauge opaques et uniformes ; les envies gardent leur + ; aucune couleur de pin selon la note.
+- Recherche Google avec le composant officiel Places UI Kit, suggestions multilignes et recherche internationale, sans imposer la géolocalisation ; recherche élargie disponible pour les établissements spécialisés.
+- Association Google facultative ; ajout et édition manuels utilisables hors connexion.
+- Informations Google Maps à la demande dans le composant officiel, sans note, avis ou photo Google.
+- Partage des adresses et liens d’itinéraire Google Maps sans API Directions.
+- Sauvegarde ZIP version 2 et restauration des ZIP versions 1 et 2, avec photos et relations préservées.
+- Thème clair indépendant du mode sombre Android ; palette sauge/encre réelle de la V1 et rouge Michelin conservés.
 
-Toutes les données métier sont conservées dans une base Room locale. Aucune donnée du journal n’est envoyée à un serveur par l’application. Seules les recherches d’adresses sont transmises à Geoapify quand une clé est configurée, et les tuiles de la carte sont chargées depuis OpenFreeMap.
+Room reste la seule base applicative. Il n’existe ni compte Resto ni Firebase/Firestore/Supabase. Le carnet n’est pas envoyé à Google : seules la carte et les recherches externes utilisent ses services.
 
-## Identité visuelle V1
+## Premier démarrage et configuration
 
-| Usage en thème clair | Couleur |
-| --- | --- |
-| Boutons principaux, navigation sélectionnée, pins | `#31473A` |
-| Accents et sélections secondaires | `#789B84` |
-| Fond général | `#F4F2EC` |
-| Surfaces, cartes, champs et dialogues | `#FFFFFF` |
-| Contours et séparateurs | `#D8D9D3` |
-| Texte principal | `#202522` |
-| Texte secondaire et navigation non sélectionnée | `#6B716D` |
-| États désactivés et informations indisponibles | `#A8ADA9` |
+Le [guide Google Cloud pas à pas](docs/GOOGLE-CLOUD.md) explique projet, facturation à effectuer personnellement, activation des trois API nécessaires, restrictions Android/package/SHA-1, fichier local, compilation, installation et coûts.
 
-Les fonds de tags utilisent une teinte légère dérivée du vert secondaire. Le mode sombre système de la V0.6 est conservé : fond encre, surfaces légèrement éclaircies et accents sauge plus clairs pour garder des textes lisibles. Les pins restent exactement `#31473A` dans les deux thèmes. Les éléments Michelin conservent leur rouge `#CB0028`, leur blanc et leurs contours existants. Les couleurs fonctionnelles des notes hors carte, des erreurs et du point de localisation sont préservées ; le style OpenFreeMap Positron et l’icône de la V0.6 restent inchangés.
+Sans clé, Resto compile et le carnet reste utilisable ; la carte explique son indisponibilité et propose le Journal. Sans services Google compatibles, la dégradation locale suit le même principe. La compatibilité Fairphone 6 /e/OS 4.0 n’a pas été validée sur appareil : voir le [protocole et rapport de tests](docs/V1.1-TESTS.md).
 
-Au démarrage à neuf, le filtre de note de la carte vaut 5. Le bouton indique un filtre actif et le texte sous la recherche précise « Note ≥ 5/10 ». Les envies non notées sont donc masquées jusqu’au retrait de ce filtre. La modification, la suppression et la réinitialisation fonctionnent comme auparavant ; le choix courant est conservé lors de la navigation, d’une rotation et d’une restauration d’état Android. Le Journal et les Envies ne reçoivent pas ce filtre par défaut.
+## Compromis EEE à connaître
 
-## Configuration
+Un compte de facturation français relève des conditions EEE. Les noms/adresses Google sont affichés par UI Kit et ne sont **pas copiés durablement dans les champs personnels**. L’utilisateur renseigne les champs de son carnet, puis peut associer un ID Places. Une simple confirmation ne constitue pas une autorisation de stockage permanent de données Google.
 
-Prérequis : Android Studio récent, JDK 17 et SDK Android 35.
+Les coordonnées Google restent en mémoire, pendant 12 h maximum, sans export ZIP. Après fermeture complète, **Adresses à localiser → Localiser** recharge uniquement la position choisie. Les anciennes coordonnées V1, personnelles ou importées restent disponibles. Le fond Google Maps n’est pas une cartographie hors ligne garantie.
 
-1. Ouvrir ce dossier comme projet Gradle.
-2. Copier `local.properties.example` vers `local.properties`.
-3. Renseigner le chemin du SDK Android.
-4. Facultatif : ajouter une clé Geoapify pour activer l’autocomplétion.
-
-```properties
-sdk.dir=/chemin/vers/Android/Sdk
-GEOAPIFY_API_KEY=votre_cle
-```
-
-Sans clé Geoapify, l’ajout manuel reste disponible. `local.properties` est ignoré par Git afin de ne pas versionner la clé.
+Les [arbitrages et l’architecture](docs/V1.1-ARCHITECTURE.md) détaillent la provenance des coordonnées, la migration additive Room 1 → 2 et les SDK utilisés. Les anciens IDs Geoapify restent uniquement des données historiques compatibles avec les sauvegardes.
 
 ## Compiler et tester
 
-```bash
-./gradlew --stop
-./gradlew testDebugUnitTest --no-daemon --max-workers=1
-./gradlew lintDebug --no-daemon --max-workers=1
-./gradlew assembleDebug --no-daemon --max-workers=1
-```
-
-L’APK de développement est généré dans `app/build/outputs/apk/debug/app-debug.apk`. La version minimale prise en charge est Android 8.0 (API 26).
-
-## APK personnel et mises à jour
-
-Cette version vise une installation personnelle, pas une publication sur le Play Store. Elle conserve donc `targetSdk 35` et produit un APK debug simple à installer.
-
-Avant chaque mise à jour :
-
-1. exporter un ZIP depuis **Stats** et vérifier qu’il est bien présent ;
-2. conserver toujours la même clé de signature ; Android Studio utilise normalement `~/.android/debug.keystore` pour les APK debug ;
-3. sauvegarder ce fichier de clé dans un emplacement privé et ne jamais l’ajouter à Git ;
-4. installer la nouvelle version par-dessus l’ancienne, sans désinstaller l’application.
+Prérequis : Android Studio, JDK 17 et SDK Android 35. Ouvrir ce dossier comme projet Gradle et conserver le wrapper fourni.
 
 ```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease assembleDebugAndroidTest --no-daemon
 ```
 
-Si Android refuse la mise à jour pour une signature différente, ne désinstallez qu’après avoir exporté le ZIP. Il faudra ensuite installer le nouvel APK puis restaurer la sauvegarde.
+APK Debug : `app/build/outputs/apk/debug/app-debug.apk`. Pour exécuter les tests Room/ZIP sur un **émulateur de test** connecté :
 
-### Vérification rapide sur Fairphone /e/OS
+```bash
+./gradlew connectedDebugAndroidTest --no-daemon
+```
 
-- ouvrir le journal, les envies, la carte et les statistiques ;
-- ajouter puis modifier un restaurant et une visite ;
-- joindre jusqu’à 5 photos, faire pivoter l’écran et rouvrir la visite ;
-- couper le réseau et vérifier que l’application reste utilisable hors carte/recherche ;
-- exporter un ZIP, ajouter une donnée temporaire, puis restaurer le ZIP ;
-- fermer complètement l’application et vérifier les données après réouverture.
+Réservez `connectedDebugAndroidTest` à un émulateur ou un appareil de test sans carnet personnel : Gradle peut désinstaller l’APK après les tests et supprimer ses données. Sur votre téléphone quotidien, effectuez uniquement les parcours manuels avec un APK installé en mise à jour et la même signature.
 
-Pour la version 0.3.0, vérifier aussi :
+La CI de PR exécute les tests JVM, le lint, compile Debug et Release, puis lance les tests instrumentés sur émulateur. Les recherches Google réelles nécessitent toujours vos clés et les tests manuels décrits dans le rapport.
 
-- combiner cuisine et Michelin sur la carte, puis réinitialiser les filtres ;
-- autoriser une position approximative ou précise, refuser l’autorisation et essayer avec la localisation désactivée ;
-- quitter la carte pendant une recherche de position : la demande doit s’arrêter ;
-- ajouter plusieurs tags successifs, retirer un tag, enregistrer et rouvrir la fiche ;
-- partager vers WhatsApp : nom, adresse, cuisines, distinction Michelin et lien d’itinéraire Google Maps (sans note personnelle depuis la V0.5) ;
-- vérifier que les compteurs Michelin ne mélangent pas les catégories et ne comptent que les restaurants visités.
+## Mettre à jour sans perdre le carnet
 
-Pour la version 0.4.0 :
+Avant toute mise à jour, exportez un ZIP depuis Stats. Installez avec le **même certificat** et le **même package** (`fr.martinrocca.resto`), par-dessus l’APK existant, sans désinstallation. Ne publiez jamais le certificat, ses mots de passe, les clés API ou une sauvegarde personnelle. La clé d’un APK est extractible ; les restrictions Google Cloud sont essentielles.
 
-- ouvrir une ancienne adresse portant « qualité-prix » ou « gastro » : ces tags apparaissent comme catégories, jamais comme cuisines ;
-- ajouter et modifier cuisines et catégories indépendamment, enregistrer puis rouvrir la fiche ;
-- vérifier les filtres Michelin, catégories et cuisines dans Journal et Envies et leur conservation après rotation (depuis la V0.6, le Journal les regroupe dans un panneau) ;
-- choisir Envie puis J’y suis allé : seul le choix actif est coloré, le titre « La visite » n’apparaît pas dans ce formulaire ;
-- tester le slider à 1, 5 et 10, en glissant et en touchant directement la piste ;
-- ouvrir la carte sur Paris, rechercher une adresse, se localiser et faire pivoter l’écran : la caméra se conserve et les commandes restent accessibles ;
-- appliquer « ≥ 8 » : seules les adresses dont la moyenne arrondie est au moins 8 apparaissent ; les envies non notées sont masquées jusqu’à réinitialisation ;
-- depuis Stats, toucher successivement Michelin et chaque nombre d’étoiles, avec une recherche et des filtres déjà actifs dans le Journal : la liste doit correspondre au compteur choisi.
+La restauration conserve le comportement V1 : remplacement du carnet courant après validation du ZIP, pas fusion de deux carnets. Les archives V1 restent acceptées. Conservez une copie externe du ZIP avant une désinstallation ou un changement de signature.
 
-Pour la version 0.5.0 :
+## Informations publiques
 
-- comparer les cartes du Journal sans tags, avec plusieurs tags et avec Michelin : hauteur identique, nom sur une ligne, tags sur une seule ligne défilante (prix séparé en bas à droite depuis la V0.6) ;
-- ajouter une tranche de prix, modifier les cuisines et les catégories, enregistrer et rouvrir : le prix reste présent ; choisir un autre prix remplace le précédent, toucher le prix sélectionné le retire ;
-- depuis le crayon de la fiche, modifier les tags et le prix ; le bouton « Modifier les tags » a disparu ;
-- partager un restaurant visité : le prix figure dans le texte, jamais la note ni les commentaires ;
-- vérifier « Commentaire » dans le formulaire Envie ;
-- ouvrir les filtres de la carte, combiner Visités/Envies, prix et note, faire pivoter l’écran et réinitialiser ;
-- vérifier sur téléphone que la carte descend derrière le bouton + jusqu’à la surface du menu, avec le logo MapLibre visible juste au-dessus de Journal ;
-- comparer les couleurs de plusieurs notes dans le Journal et sur le slider, en thème clair et sombre ; depuis la V1, tous les pins utilisent une couleur unique.
+[Conditions d’utilisation](docs/CONDITIONS.md) · [Confidentialité](docs/CONFIDENTIALITE.md) · [Licence MIT](LICENSE) · [Changelog](CHANGELOG.md).
 
-Pour la version 0.6.0 :
-
-- ouvrir les filtres du Journal : même bouton et même panneau que sur la carte ; combiner Michelin, cuisine, prix et note, vérifier le compteur du bouton puis réinitialiser ;
-- faire pivoter l’écran avec le panneau ouvert, puis accéder au Journal depuis une statistique Michelin : les filtres restent cohérents ;
-- comparer une carte avec beaucoup de tags et une carte sans prix : les hauteurs restent identiques, le prix reste visible en petit en bas à droite pendant le défilement des autres tags ;
-- ouvrir la fiche : le nom apparaît dans le bandeau supérieur, la note moyenne au-dessus des informations et les notes individuelles dans l’historique ;
-- saisir deux visites notées 7 et 8 : la fiche et le Journal affichent 7,5 ; le filtre ≥7 inclut le restaurant, ≥8 l’exclut ; modifier ou supprimer une visite recalcule la moyenne ;
-- partager une adresse dont le début contient déjà le nom, sur une ligne séparée ou avant une virgule : le nom n’est pas ajouté une seconde fois, une ligne vide sépare l’adresse des cuisines et du prix ;
-- ouvrir le lien partagé : destination GPS si disponible, sinon nom/adresse, sans imposer de moyen de transport ;
-- installer la mise à jour sur le Fairphone et vérifier la nouvelle icône boussole-fourchette dans le lanceur.
-
-Pour la version 1.0.0 :
-
-- démarrer à neuf : Carte est sélectionnée, le filtre ≥5 est visible et actif ; les restaurants sous 5 et les envies non notées sont masqués ;
-- retirer le filtre, aller dans Journal puis revenir, faire pivoter l’écran : le filtre ne doit pas se réactiver ; tester également ≥7, une cuisine et un prix, puis réinitialiser ;
-- comparer des restaurants notés 1, 5 et 10 après retrait du filtre : même pin vert opaque ; les envies gardent leur signe + intérieur avec la même couleur ;
-- vérifier les couleurs des boutons, champs, cartes, filtres, dialogues et onglets en thème clair puis sombre, ainsi que les états désactivés pendant un enregistrement ou une sauvegarde ;
-- vérifier les tags Michelin rouges et blancs, les notes du Journal et du slider, l’accès au Journal depuis Stats et le partage Google Maps ;
-- conserver les données et photos existantes après mise à jour : aucune migration Room n’est requise.
-
-La nouvelle icône utilise le PNG fourni, inchangé, avec un fond blanc et une marge adaptative pour les différents masques Android. Voir les [consignes officielles pour les icônes adaptatives](https://developer.android.com/develop/ui/compose/system/icon_design_adaptive).
-
-Le partage suit le [format officiel des liens Google Maps d’itinéraire](https://developers.google.com/maps/documentation/urls/get-started#directions). Aucun appel réseau ni clé Google n’est nécessaire pour construire le lien ; le destinataire choisit son itinéraire en l’ouvrant.
-
-« qualité-prix » et « gastro » sont des catégories personnelles cumulables, indépendantes du classement officiel Michelin. Elles restent enregistrées comme tags dans les sauvegardes existantes.
-
-Le prix est un tag réservé, unique et facultatif, distinct des cuisines. Il suit les mêmes sauvegardes que les autres tags, sans migration Room. Les adresses sans prix sont masquées lorsqu’une tranche est sélectionnée dans les filtres.
-
-La permission de localisation est demandée uniquement au toucher de « Me localiser ». L’application ne suit pas la position en arrière-plan et ne l’enregistre pas dans le journal. Le fond de carte utilise OpenFreeMap ; les requêtes saisies pour chercher une adresse sont envoyées à Geoapify. Les notes personnelles, commentaires et photos ne sont pas inclus dans le partage texte.
-
-## Sauvegardes
-
-L’écran **Stats** permet d’exporter un ZIP puis de le restaurer via le sélecteur de fichiers Android. La restauration valide d’abord le format, les relations entre les données et la présence de chaque photo. La base existante n’est remplacée que si la sauvegarde est cohérente.
-
-Le ZIP n’est pas chiffré : il doit être conservé dans un emplacement privé. Le format 1 restera lisible lors des évolutions futures de l’application.
-
-## Architecture
-
-- `data/local` : entités, relations, DAO et base Room ;
-- `data/repository` : transactions et règles métier ;
-- `data/remote/geoapify` : autocomplétion d’adresses ;
-- `data/photo` : import et suppression des photos privées ;
-- `data/backup` : export et restauration ZIP ;
-- `domain/model` : modèle utilisé par l’interface ;
-- `ui` : écrans Jetpack Compose ;
-- `navigation` : routes et barre de navigation ;
-- `theme` : identité sauge & encre, avec couleurs fonctionnelles séparées pour les notes et Michelin.
-
-La base Room est la source de vérité. Un restaurant est considéré comme visité s’il possède au moins une visite. Sa note est la moyenne de toutes ses visites, arrondie à une décimale ; les badges et filtres utilisent cette même valeur. Les couleurs des badges utilisent le niveau entier le plus proche dans la palette validée (7,5 → niveau 8) ; la note n’influence plus les pins. Les notes individuelles restent inchangées. Le Journal reste trié par date de dernière visite ; la statistique globale conserve sa moyenne de toutes les visites.
-
-La base est actuellement en version 1. Toute évolution de schéma doit fournir une migration Room, conserver le JSON exporté dans `app/schemas` et ajouter un test de migration ; aucune migration destructive ne doit être utilisée.
+Dépôt principal : branche **master**. Les évolutions sont proposées par branche et PR ; aucune fusion automatique dans le cadre de la V1.1.

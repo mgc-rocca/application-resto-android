@@ -17,16 +17,17 @@ class RestaurantFilterStateTest {
     }
 
     @Test
-    fun `map starts with a visible minimum rating while other screens stay unfiltered`() {
-        val map = RestaurantFilterState(initialMinimumRating = 5)
-        assertEquals(5, map.minimumRating)
-        assertEquals(1, map.activeCount)
+    fun `map and other screens start without a minimum rating`() {
+        val map = RestaurantFilterState()
+        assertNull(map.minimumRating)
+        assertEquals(0, map.activeCount)
         assertEquals(0, RestaurantFilterState().activeCount)
     }
 
     @Test
-    fun `clearing the default survives state restoration without resetting other filters`() {
-        val map = RestaurantFilterState(initialMinimumRating = 5).apply {
+    fun `clearing a chosen rating survives restoration without resetting other filters`() {
+        val map = RestaurantFilterState().apply {
+            minimumRating = 5
             minimumRating = null
             priceRange = PriceRange.FROM_15_TO_40
         }
@@ -38,7 +39,7 @@ class RestaurantFilterStateTest {
 
     @Test
     fun `modified rating and reset both survive state restoration`() {
-        val map = RestaurantFilterState(initialMinimumRating = 5).apply { minimumRating = 8 }
+        val map = RestaurantFilterState().apply { minimumRating = 8 }
         assertEquals(8, restored(map).minimumRating)
         map.reset()
         assertNull(restored(map).minimumRating)
