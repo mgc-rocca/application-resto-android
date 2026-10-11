@@ -100,10 +100,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: stable-v1-reference
-          path: |
-            build/compatibility/
-            ../resto-stable-v1/app/build/outputs/androidTest-results/
-            ../resto-stable-v1/app/build/reports/androidTests/
+          path: build/compatibility/
           if-no-files-found: ignore
 
   local-data-instrumentation:
