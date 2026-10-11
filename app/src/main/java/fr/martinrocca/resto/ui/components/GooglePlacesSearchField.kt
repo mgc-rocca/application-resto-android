@@ -57,7 +57,7 @@ fun GooglePlacesSearchField(
                 val status = BasicPlaceAutocomplete.getResultStatusFromIntent(data)
                 if (result.resultCode == Activity.RESULT_OK && !place?.id.isNullOrBlank()) {
                     error = null
-                    onPlaceSelected(requireNotNull(place?.id))
+                    onPlaceSelected(requireNotNull(place.id))
                 } else if (status != null && !status.isSuccess && !status.isCanceled) {
                     error = "Recherche Google indisponible. Vérifiez la connexion, la clé et les quotas. La saisie manuelle reste possible."
                 }

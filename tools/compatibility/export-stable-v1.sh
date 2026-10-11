@@ -27,7 +27,27 @@ if ! ./gradlew connectedDebugAndroidTest --stacktrace --no-daemon --max-workers=
 fi
 tail -n 15 "$resto_current_directory/build/compatibility/stable-v1-export.log"
 cd "$resto_current_directory"
-adb exec-out run-as fr.martinrocca.resto cat cache/resto-stable-v1.zip > build/compatibility/resto-stable-v1.zip
-adb exec-out run-as fr.martinrocca.resto cat cache/resto-stable-v1.db > build/compatibility/resto-stable-v1.db
-test -s build/compatibility/resto-stable-v1.zip
-test -s build/compatibility/resto-stable-v1.db
+adb exec-out cat /data/local/tmp/resto-stable-v1.zip > build/compatibility/resto-stable-v1.zip
+adb exec-out cat /data/local/tmp/resto-stable-v1.db > build/compatibility/resto-stable-v1.db
+python3 - <<'PY'
+import json
+import sqlite3
+from pathlib import Path
+from zipfile import ZipFile
+
+folder = Path('build/compatibility')
+with ZipFile(folder / 'resto-stable-v1.zip') as archive:
+    assert archive.testzip() is None
+    manifest = json.loads(archive.read('backup.json'))
+    assert manifest['version'] == 1
+    assert len(manifest['restaurants']) == 2
+    assert len(manifest['photos']) == 1
+database = folder / 'resto-stable-v1.db'
+assert database.read_bytes().startswith(b'SQLite format 3\x00')
+with sqlite3.connect(f'file:{database.resolve()}?mode=ro', uri=True) as connection:
+    assert connection.execute('PRAGMA user_version').fetchone()[0] == 1
+    assert connection.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+    assert connection.execute('PRAGMA foreign_key_check').fetchall() == []
+print('Verified V1 ZIP, SQLite version, integrity and foreign keys.')
+PY
+adb shell rm -f /data/local/tmp/resto-stable-v1.zip /data/local/tmp/resto-stable-v1.db

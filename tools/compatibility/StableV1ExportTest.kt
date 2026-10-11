@@ -2,7 +2,10 @@ package fr.martinrocca.resto.compatibility
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.app.Instrumentation
 import android.net.Uri
+import android.os.ParcelFileDescriptor
+import androidx.annotation.RequiresApi
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -15,11 +18,13 @@ import java.util.zip.ZipFile
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /** Copied by CI into commit 3413bcc, then compiled and run ONLY with the stable V1. */
 @RunWith(AndroidJUnit4::class)
+@RequiresApi(31) // Reference export runs only on the API 35 CI emulator.
 class StableV1ExportTest {
     @Test fun exportZipAndCheckpointedDatabaseUsingTheRealStableV1Code() = runBlocking<Unit> {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -50,11 +55,27 @@ class StableV1ExportTest {
             database.close()
             closed = true
             base.getDatabasePath(name).copyTo(sqlite, overwrite = true)
+            // Gradle uninstalls the test APK afterwards. Preserve only these fictional
+            // reference files under the emulator shell's directory before that cleanup.
+            exportToShellDirectory(instrumentation, zip)
+            exportToShellDirectory(instrumentation, sqlite)
         } finally {
             if (!closed) database.close()
             base.deleteDatabase(name) // Never the application's resto.db.
             isolated.cleanUp()
         }
+    }
+
+    private fun exportToShellDirectory(instrumentation: Instrumentation, file: File) {
+        val bytes = file.readBytes()
+        val target = "/data/local/tmp/${file.name}"
+        val pipes = instrumentation.uiAutomation.executeShellCommandRw("dd of=$target")
+        ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use { it.write(bytes) }
+        ParcelFileDescriptor.AutoCloseInputStream(pipes[0]).use { it.readBytes() }
+        val verification = ParcelFileDescriptor.AutoCloseInputStream(
+            instrumentation.uiAutomation.executeShellCommand("cat $target"),
+        ).use { it.readBytes() }
+        assertArrayEquals(bytes, verification)
     }
 }
 
