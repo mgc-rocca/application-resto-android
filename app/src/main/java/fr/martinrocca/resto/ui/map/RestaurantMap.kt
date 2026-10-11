@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.content.ComponentCallbacks2
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -103,11 +105,21 @@ fun RestaurantMap(
             }.onFailure { reportError("Carte Google indisponible. Le Journal reste disponible.") }
         }
         val observer = LifecycleEventObserver { _, _ -> sync() }
+        val memoryCallbacks = object : ComponentCallbacks2 {
+            override fun onConfigurationChanged(newConfig: Configuration) = Unit
+            override fun onLowMemory() { runCatching { mapView.onLowMemory() } }
+            override fun onTrimMemory(level: Int) {
+                if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) onLowMemory()
+            }
+        }
         lifecycle.addObserver(observer)
+        context.applicationContext.registerComponentCallbacks(memoryCallbacks)
         sync()
         onDispose {
             lifecycle.removeObserver(observer)
+            context.applicationContext.unregisterComponentCallbacks(memoryCallbacks)
             runCatching {
+                map?.cameraPosition?.toMapTarget()?.let(cameraChanged)
                 if (resumed) mapView.onPause()
                 if (started) mapView.onStop()
                 mapView.onDestroy()

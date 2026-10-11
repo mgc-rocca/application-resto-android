@@ -61,8 +61,8 @@ class GooglePlaceDetailsActivity : FragmentActivity() {
         try {
             val existing = supportFragmentManager.findFragmentByTag(FRAGMENT_TAG) as? PlaceDetailsCompactFragment
             val details = existing ?: PlaceDetailsCompactFragment.newInstance(
-                Orientation.VERTICAL,
                 listOf(PlaceDetailsCompactFragment.Content.ADDRESS),
+                Orientation.VERTICAL,
                 R.style.Theme_Resto_Places,
             )
             details.setPlaceLoadListener(object : PlaceLoadListener {
