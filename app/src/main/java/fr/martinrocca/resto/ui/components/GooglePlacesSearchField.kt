@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -21,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.LatLng
@@ -48,6 +50,7 @@ fun GooglePlacesSearchField(
 ) {
     val context = LocalContext.current
     var error by rememberSaveable { mutableStateOf<String?>(null) }
+    var widerSearch by rememberSaveable { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val data = result.data
         // Cancellation is silent and never changes an existing association or personal fields.
@@ -76,6 +79,12 @@ fun GooglePlacesSearchField(
             label = { Text(if (restaurantsOnly) "Nom à rechercher sur Google" else "Adresse ou lieu") },
             singleLine = true,
         )
+        if (restaurantsOnly) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = widerSearch, onCheckedChange = { widerSearch = it })
+                Text("Élargir la recherche à tous les établissements", style = MaterialTheme.typography.bodySmall)
+            }
+        }
         OutlinedButton(onClick = {
             error = service.preparePlaces()
             if (error == null) {
@@ -88,7 +97,9 @@ fun GooglePlacesSearchField(
                                 .theme(R.style.Theme_Resto_Places)
                                 .build(),
                         )
-                    if (restaurantsOnly) builder.setTypesFilter(listOf("restaurant", "cafe", "bar", "bakery", "meal_takeaway"))
+                    // Five primary categories cannot cover every specialist/bistro type.
+                    // Explicit wider search removes this filter without extra background calls.
+                    if (restaurantsOnly && !widerSearch) builder.setTypesFilter(listOf("restaurant", "cafe", "bar", "bakery", "meal_takeaway"))
                     bias?.let { point ->
                         builder.setOrigin(LatLng(point.latitude, point.longitude))
                         // Bias only, never a country restriction: foreign places remain discoverable.

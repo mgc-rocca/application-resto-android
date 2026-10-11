@@ -7,7 +7,7 @@ Carnet gastronomique Android personnel, local et sans compte. La V1.1 remplace l
 - Ouverture sur **Carte**, sans filtre actif par défaut. Les filtres personnels de note, Michelin, cuisine, catégories et prix restent disponibles.
 - Journal local, Envies, Statistiques, visites, notes personnelles 1–10 et moyennes, commentaires, calendrier, tags normalisés et jusqu’à cinq photos personnelles par visite.
 - Pins V1 sauge opaques et uniformes ; les envies gardent leur + ; aucune couleur de pin selon la note.
-- Recherche Google avec le composant officiel Places UI Kit, suggestions multilignes et recherche internationale, sans imposer la géolocalisation.
+- Recherche Google avec le composant officiel Places UI Kit, suggestions multilignes et recherche internationale, sans imposer la géolocalisation ; recherche élargie disponible pour les établissements spécialisés.
 - Association Google facultative ; ajout et édition manuels utilisables hors connexion.
 - Informations Google Maps à la demande dans le composant officiel, sans note, avis ou photo Google.
 - Partage des adresses et liens d’itinéraire Google Maps sans API Directions.

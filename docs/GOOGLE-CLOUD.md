@@ -121,7 +121,7 @@ Pour une version Release signée, utilisez **Build → Generate Signed App Bundl
 
 1. Ouvrez Resto avec Internet actif. Carte doit apparaître, sans filtre actif, avec les anciennes adresses et leurs pins sauge.
 2. Déplacez et zoomez ; vérifiez eau bleutée, parcs sauge clair et POI discrets.
-3. Touchez **+**, saisissez un nom puis **Rechercher avec Google**. Essayez `Chez Janou Paris`, un petit indépendant que vous connaissez, un café et un restaurant étranger. Google affiche les suggestions dans son propre écran.
+3. Touchez **+**, saisissez un nom puis **Rechercher avec Google**. Essayez `Chez Janou Paris`, un petit indépendant que vous connaissez, un café et un restaurant étranger. Google affiche les suggestions dans son propre écran. Si un établissement spécialisé ou un bistrot manque, cochez **Élargir la recherche à tous les établissements** puis relancez : le classement des types Google ne doit pas empêcher de retrouver un lieu connu.
 4. Sélectionnez l’établissement. L’association est conservée ; **Informations Google Maps** ouvre son nom/adresse dans le composant officiel. Aucune note Google ne doit être affichée.
 5. Complétez vos champs personnels, ajoutez une envie ou une visite et enregistrez. Vérifiez le Journal, les tags et la photo.
 6. Après fermeture complète de l’application, utilisez **Adresses à localiser → Localiser** pour recharger à la demande une position uniquement Google. Les anciennes coordonnées V1 restent présentes.
