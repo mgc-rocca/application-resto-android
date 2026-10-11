@@ -178,7 +178,8 @@ fun RestaurantMap(
             locationMarker?.remove()
             locationMarker = deviceLocation?.let {
                 current.addMarker(MarkerOptions().position(LatLng(it.latitude, it.longitude))
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)))
+                    .icon(BitmapDescriptorFactory.fromBitmap(createLocationBitmap(context.resources.displayMetrics.density)))
+                    .anchor(0.5f, 0.5f))
             }
         }
     }
@@ -195,6 +196,18 @@ private val PARIS_MAP_TARGET = MapTarget(48.8566, 2.3522, 11.5)
 private fun MapTarget.toCameraPosition(): CameraPosition = CameraPosition.Builder()
     .target(LatLng(latitude, longitude)).zoom(zoom.toFloat()).bearing(bearing.toFloat()).tilt(tilt.toFloat()).build()
 private fun CameraPosition.toMapTarget() = MapTarget(target.latitude, target.longitude, zoom.toDouble(), bearing.toDouble(), tilt.toDouble())
+
+private fun createLocationBitmap(density: Float): Bitmap {
+    val size = (24 * density).toInt().coerceAtLeast(24)
+    return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        paint.color = Color.WHITE
+        canvas.drawCircle(size / 2f, size / 2f, 10 * density, paint)
+        paint.color = Color.rgb(50, 117, 172) // V1 device-location dot #3275AC.
+        canvas.drawCircle(size / 2f, size / 2f, 7 * density, paint)
+    }
+}
 
 private fun createMarkerBitmap(
     density: Float,

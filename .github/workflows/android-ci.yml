@@ -34,7 +34,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Test, lint and assemble debug/release APKs
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease assembleDebugAndroidTest --stacktrace --no-daemon
+        run: |
+          if ! ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease assembleDebugAndroidTest --stacktrace --no-daemon > build-verification.log 2>&1; then
+            rg -n -m 30 '^e:|What went wrong|^> |^FAILURE|requires' build-verification.log || true
+            tail -n 60 build-verification.log
+            exit 1
+          fi
+          tail -n 30 build-verification.log
 
       - name: Upload unit reports and Room schemas
         if: always()
@@ -42,6 +48,7 @@ jobs:
         with:
           name: android-unit-reports-and-schemas
           path: |
+            build-verification.log
             app/build/test-results/
             app/build/reports/tests/
             app/schemas/

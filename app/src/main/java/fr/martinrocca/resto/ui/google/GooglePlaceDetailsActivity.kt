@@ -27,7 +27,11 @@ class GooglePlaceDetailsActivity : FragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        val service = (application as RestoApplication).appContainer.googlePlacesService
+        val error = service.preparePlaces()
+        // A restored Google fragment requires SDK configuration before FragmentActivity
+        // restores it. If Google is unavailable, show our local fallback instead.
+        super.onCreate(if (error == null) savedInstanceState else null)
         val density = resources.displayMetrics.density
         val padding = (20 * density).toInt()
         val layout = LinearLayout(this).apply {
@@ -49,8 +53,6 @@ class GooglePlaceDetailsActivity : FragmentActivity() {
         })
         setContentView(layout)
 
-        val service = (application as RestoApplication).appContainer.googlePlacesService
-        val error = service.preparePlaces()
         val placeId = intent.getStringExtra(EXTRA_PLACE_ID)
         if (error != null || placeId.isNullOrBlank()) {
             message.text = error ?: "Établissement Google non associé."

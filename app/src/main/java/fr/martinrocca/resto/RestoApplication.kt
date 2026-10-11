@@ -11,11 +11,16 @@ import fr.martinrocca.resto.data.repository.RestaurantRepository
 class RestoApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        // Applies to Google’s AppCompat UI activities too; does not initialise a Google SDK.
+        // Applies to Google’s AppCompat UI activities too.
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+        // Local SDK configuration only: needed when Android restores a Google autocomplete
+        // activity after process death. Never fetches a place or waits for a map/network.
+        if (BuildConfig.GOOGLE_PLACES_API_KEY.isNotBlank()) {
+            runCatching { appContainer.googlePlacesService.preparePlaces() }
+        }
     }
 
-    // No Google initialisation, service check or network request at application startup.
+    // Room remains independent of the optional Google SDK configuration.
     val appContainer: AppContainer by lazy {
         val database = RestoDatabase.create(this)
         val photoManager = PhotoManager(this)
